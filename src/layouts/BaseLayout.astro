@@ -2,17 +2,23 @@
 import '@fontsource-variable/space-grotesk';
 import '@fontsource-variable/jetbrains-mono';
 import '../styles/global.css';
+import Nav from '../components/layout/Nav.astro';
+import Footer from '../components/layout/Footer.astro';
+import ScrollProgress from '../components/layout/ScrollProgress.astro';
 
 interface Props {
   title: string;
   description?: string;
 }
 
-const { title, description = 'Missing Piece Solutions — AI agency building systems that deliver.' } = Astro.props;
+const {
+  title,
+  description = 'Missing Piece Solutions — AI agency building systems that deliver.',
+} = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class="scroll-smooth scroll-pt-20">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -21,6 +27,11 @@ const { title, description = 'Missing Piece Solutions — AI agency building sys
     <title>{title}</title>
   </head>
   <body class="bg-bg-base text-text-primary font-sans antialiased">
-    <slot />
+    <Nav />
+    <ScrollProgress />
+    <main>
+      <slot />
+    </main>
+    <Footer />
   </body>
 </html>
