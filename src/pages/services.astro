@@ -1,0 +1,68 @@
+---
+import { getEntry } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionHeading from '../components/ui/SectionHeading.astro';
+import GlassCard from '../components/ui/GlassCard.astro';
+import Button from '../components/ui/Button.astro';
+import CtaBanner from '../components/sections/CtaBanner.astro';
+
+const entry = await getEntry('pages', 'services');
+if (!entry) throw new Error('Services page content not found');
+const { title, description, services, cta } = entry.data;
+---
+
+<BaseLayout title={title} description={description}>
+  <!-- Page Header -->
+  <section class="bg-bg-base py-24 px-6">
+    <div class="max-w-6xl mx-auto">
+      <SectionHeading
+        eyebrow="Our Services"
+        heading={title}
+        subheading={description}
+        align="center"
+      />
+    </div>
+  </section>
+
+  <!-- Services Grid -->
+  <section class="bg-surface py-24 px-6">
+    <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      {services.map((svc: any) => (
+        <GlassCard hover>
+          <div class="flex flex-col h-full space-y-4">
+            <h3 class="text-xl font-semibold text-text-primary">{svc.name}</h3>
+            <p class="text-sm text-accent italic">{svc.tagline}</p>
+            <p class="text-sm text-text-muted">{svc.description}</p>
+
+            <ul class="space-y-1.5 pt-2">
+              {svc.deliverables.map((item: string) => (
+                <li class="text-xs text-text-muted flex items-start gap-2">
+                  <span class="text-accent mt-0.5">&#x2022;</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+
+            <div class="text-xs text-text-muted/70 italic border-l-2 border-accent/30 pl-3 mt-4">
+              {svc.micro_example}
+            </div>
+
+            <div class="pt-4 mt-auto">
+              <Button href="/contact" variant="ghost" size="sm">
+                Discuss this
+              </Button>
+            </div>
+          </div>
+        </GlassCard>
+      ))}
+    </div>
+  </section>
+
+  <!-- Bottom CTA -->
+  <CtaBanner
+    heading={cta.heading}
+    subtext={cta.text}
+    ctaLabel={cta.label}
+    ctaHref={cta.href}
+  />
+</BaseLayout>
