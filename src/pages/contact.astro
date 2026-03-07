@@ -1,0 +1,172 @@
+---
+import { getEntry } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import GlassCard from '../components/ui/GlassCard.astro';
+import SectionHeading from '../components/ui/SectionHeading.astro';
+import { FORMSPREE_ENDPOINT } from '../config';
+
+const entry = await getEntry('pages', 'contact');
+if (!entry) throw new Error('Missing content entry: pages/contact');
+
+const {
+  title,
+  description,
+  intro,
+  form_fields,
+  form_submit_label,
+  form_success_message,
+  form_error_message,
+  privacy_note,
+} = entry.data;
+
+// Convert markdown link in privacy_note to HTML anchor
+const privacyHtml = (privacy_note as string).replace(
+  /\[([^\]]+)\]\(([^)]+)\)/g,
+  '<a href="$2" class="text-accent hover:underline">$1</a>'
+);
+---
+
+<BaseLayout title={title} description={description}>
+  <!-- Page header -->
+  <section class="bg-bg-base pt-28 pb-8 px-6">
+    <div class="max-w-3xl mx-auto">
+      <SectionHeading
+        eyebrow="Contact"
+        heading={intro.heading}
+        subheading={intro.text}
+        align="center"
+      />
+    </div>
+  </section>
+
+  <!-- Form section -->
+  <section class="bg-bg-base pb-24 px-6">
+    <div class="max-w-xl mx-auto">
+      <GlassCard>
+        <form id="contact-form" action={FORMSPREE_ENDPOINT} method="POST">
+          <!-- Honeypot for spam protection -->
+          <input
+            type="text"
+            name="_gotcha"
+            style="display:none"
+            tabindex="-1"
+            autocomplete="off"
+          />
+
+          {form_fields.map((field: any) => (
+            <div class="space-y-1 mb-4">
+              <label
+                for={field.name}
+                class="text-sm font-medium text-text-primary mb-1 block"
+              >
+                {field.label}
+              </label>
+              {field.type === 'textarea' ? (
+                <textarea
+                  id={field.name}
+                  name={field.name}
+                  rows={5}
+                  required={field.required}
+                  placeholder={field.placeholder}
+                  class="w-full bg-bg-base/50 border border-white/10 rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/50 transition-colors"
+                />
+              ) : (
+                <input
+                  id={field.name}
+                  name={field.name}
+                  type={field.type}
+                  required={field.required}
+                  placeholder={field.placeholder}
+                  class="w-full bg-bg-base/50 border border-white/10 rounded-lg px-4 py-3 text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:ring-2 focus:ring-accent/50 transition-colors"
+                />
+              )}
+            </div>
+          ))}
+
+          <button
+            type="submit"
+            id="submit-btn"
+            class="w-full py-4 mt-6 bg-accent text-white font-semibold text-lg rounded-lg transition-all hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] hover:bg-accent-muted active:scale-[0.98] cursor-pointer"
+          >
+            {form_submit_label}
+          </button>
+        </form>
+
+        <p class="text-xs text-text-muted/70 text-center mt-4" set:html={privacyHtml} />
+      </GlassCard>
+    </div>
+  </section>
+
+  <!-- Success modal overlay -->
+  <div
+    id="success-modal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+  >
+    <div class="bg-surface/80 backdrop-blur-lg rounded-xl ring-1 ring-white/10 shadow-2xl p-8 max-w-md mx-4 text-center space-y-4">
+      <h2 class="text-2xl font-bold text-text-primary">Thank You!</h2>
+      <p class="text-text-muted">{form_success_message}</p>
+      <button
+        data-close-modal
+        class="text-accent hover:underline text-sm cursor-pointer"
+      >
+        Close
+      </button>
+    </div>
+  </div>
+
+  <script>
+    function initContactForm() {
+      const form = document.getElementById('contact-form') as HTMLFormElement | null;
+      const modal = document.getElementById('success-modal');
+      const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement | null;
+      if (!form || !modal || !submitBtn) return;
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const required = form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('[required]');
+        let valid = true;
+        required.forEach((input) => {
+          if (!input.value.trim()) {
+            valid = false;
+            input.classList.add('ring-2', 'ring-red-500');
+          } else {
+            input.classList.remove('ring-2', 'ring-red-500');
+          }
+        });
+        if (!valid) return;
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Sending...';
+
+        try {
+          const res = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'Accept': 'application/json' },
+          });
+          if (res.ok) {
+            form.reset();
+            modal.classList.remove('hidden');
+          } else {
+            alert('Something went wrong. Please try again.');
+          }
+        } catch {
+          alert('Network error. Please try again.');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Send Message';
+        }
+      });
+
+      modal.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target === modal || target.closest('[data-close-modal]')) {
+          modal.classList.add('hidden');
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', initContactForm);
+    document.addEventListener('astro:page-load', initContactForm);
+  </script>
+</BaseLayout>
