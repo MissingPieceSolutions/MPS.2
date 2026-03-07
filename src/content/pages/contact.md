@@ -20,6 +20,16 @@ form_fields:
     type: "text"
     required: false
     placeholder: "Acme Inc. (optional)"
+  - name: "project_type"
+    label: "Project Type"
+    type: "select"
+    required: false
+    placeholder: "Select a project type"
+    options:
+      - "Workflow Automation"
+      - "Custom AI Development"
+      - "AI Strategy & Consulting"
+      - "Other"
   - name: "message"
     label: "Your Message"
     type: "textarea"
