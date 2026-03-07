@@ -1,78 +1,87 @@
 ---
+import { getEntry } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import HeroSection from '../components/sections/HeroSection.astro';
+import TrustBar from '../components/sections/TrustBar.astro';
+import CtaBanner from '../components/sections/CtaBanner.astro';
+import GlassCard from '../components/ui/GlassCard.astro';
+import SectionHeading from '../components/ui/SectionHeading.astro';
+import Button from '../components/ui/Button.astro';
+import Badge from '../components/ui/Badge.astro';
+
+const entry = await getEntry('pages', 'home');
+const { hero, services_preview, portfolio_teaser, about_preview, cta_banner } = entry.data;
 ---
 
-<BaseLayout title="MPS — Missing Piece Solutions">
-  <!-- Hero section -->
-  <section id="hero" class="min-h-screen flex items-center justify-center bg-bg-base px-6 pt-20">
-    <div class="text-center space-y-6 max-w-3xl">
-      <h1 class="text-5xl lg:text-7xl font-bold text-text-primary leading-tight">
-        Build AI That Delivers
-      </h1>
-      <p class="text-lg lg:text-xl text-text-muted max-w-xl mx-auto">
-        Missing Piece Solutions builds AI workflows and custom systems that turn ambitious ideas into measurable outcomes.
-      </p>
-      <div class="flex flex-wrap justify-center gap-4 pt-4">
-        <a
-          href="/services"
-          class="bg-accent text-white font-semibold px-8 py-3 rounded-lg transition-all hover:shadow-[0_0_24px_rgba(139,92,246,0.4)] hover:bg-accent-muted"
-        >
-          Our Services
-        </a>
-        <a
-          href="/portfolio"
-          class="border border-white/20 text-text-primary font-semibold px-8 py-3 rounded-lg transition-all hover:border-white/40 hover:bg-white/5"
-        >
-          See Our Work
-        </a>
+<BaseLayout title={entry.data.title} description={entry.data.description}>
+
+  <!-- 1. Hero -->
+  <HeroSection
+    headline={hero.headline}
+    subheadline={hero.subheadline}
+    ctaLabel="Get Started"
+    ctaHref="#cta"
+  />
+
+  <!-- 2. Trust Bar -->
+  <TrustBar />
+
+  <!-- 3. Services Overview -->
+  <section class="bg-bg-base py-24 px-6">
+    <div class="max-w-6xl mx-auto space-y-12">
+      <SectionHeading eyebrow="Services" heading={services_preview.heading} align="center" />
+      <div class="grid md:grid-cols-3 gap-8">
+        {services_preview.items.map((service: { name: string; blurb: string }) => (
+          <GlassCard hover>
+            <div class="space-y-4">
+              <h3 class="text-lg font-semibold text-text-primary">{service.name}</h3>
+              <p class="text-sm text-text-muted leading-relaxed">{service.blurb}</p>
+              <Button href="/services" variant="ghost" size="sm">Learn more</Button>
+            </div>
+          </GlassCard>
+        ))}
       </div>
     </div>
   </section>
 
-  <!-- Services section -->
-  <section id="services" class="min-h-screen flex items-center justify-center bg-surface px-6 py-32">
-    <div class="max-w-4xl w-full text-center space-y-12">
-      <h2 class="text-4xl font-bold text-text-primary">What We Build</h2>
-      <div class="grid md:grid-cols-3 gap-8 text-left">
-        <div class="bg-surface-elevated rounded-xl p-8 border border-white/5 space-y-3">
-          <h3 class="text-lg font-semibold text-text-primary">AI Workflow Automation</h3>
-          <p class="text-sm text-text-muted">End-to-end automation of complex business processes using modern AI toolchains.</p>
-        </div>
-        <div class="bg-surface-elevated rounded-xl p-8 border border-white/5 space-y-3">
-          <h3 class="text-lg font-semibold text-text-primary">Custom AI Development</h3>
-          <p class="text-sm text-text-muted">Bespoke AI systems designed around your specific domain and data.</p>
-        </div>
-        <div class="bg-surface-elevated rounded-xl p-8 border border-white/5 space-y-3">
-          <h3 class="text-lg font-semibold text-text-primary">AI Strategy &amp; Consulting</h3>
-          <p class="text-sm text-text-muted">Clarity on where AI will move the needle — and a roadmap to get there.</p>
-        </div>
+  <!-- 4. Portfolio Teaser -->
+  <section class="bg-surface py-24 px-6">
+    <div class="max-w-6xl mx-auto space-y-8">
+      <SectionHeading eyebrow="Portfolio" heading={portfolio_teaser.heading} />
+      <div class="space-y-6">
+        <Badge>{portfolio_teaser.project_name}</Badge>
+        <p class="text-3xl md:text-4xl font-bold text-text-primary">
+          {portfolio_teaser.outcome}
+        </p>
+        <p class="text-lg text-text-muted max-w-3xl leading-relaxed">
+          {portfolio_teaser.teaser_text}
+        </p>
+        <Button href={portfolio_teaser.cta_href} variant="primary">
+          {portfolio_teaser.cta_label}
+        </Button>
       </div>
     </div>
   </section>
 
-  <!-- Portfolio section -->
-  <section id="portfolio" class="min-h-screen flex items-center justify-center bg-bg-base px-6 py-32">
-    <div class="max-w-4xl w-full text-center space-y-8">
-      <h2 class="text-4xl font-bold text-text-primary">Case Studies</h2>
-      <p class="text-lg text-text-muted">
-        Real projects. Real outcomes. Phase 5 will render full case studies here.
+  <!-- 5. About Preview -->
+  <section class="bg-bg-base py-24 px-6">
+    <div class="max-w-6xl mx-auto space-y-6">
+      <SectionHeading eyebrow="About" heading={about_preview.heading} />
+      <p class="text-text-muted text-lg max-w-2xl leading-relaxed">
+        {about_preview.text}
       </p>
-      <div class="bg-surface rounded-xl p-12 border border-white/5">
-        <p class="text-text-muted text-sm font-mono">[Portfolio content — Phase 5]</p>
-      </div>
+      <a href={about_preview.cta_href} class="inline-block text-accent hover:underline font-medium">
+        {about_preview.cta_label} &rarr;
+      </a>
     </div>
   </section>
 
-  <!-- About section -->
-  <section id="about" class="min-h-screen flex items-center justify-center bg-surface px-6 py-32">
-    <div class="max-w-3xl w-full text-center space-y-8">
-      <h2 class="text-4xl font-bold text-text-primary">About MPS</h2>
-      <p class="text-lg text-text-muted">
-        A small, focused agency that builds AI systems with intent. Phase 5 will render the full team and story here.
-      </p>
-      <div class="bg-surface-elevated rounded-xl p-12 border border-white/5">
-        <p class="text-text-muted text-sm font-mono">[About content — Phase 5]</p>
-      </div>
-    </div>
-  </section>
+  <!-- 6. Bottom CTA -->
+  <CtaBanner
+    heading={cta_banner.heading}
+    subtext={cta_banner.subtext}
+    ctaLabel={cta_banner.cta_label}
+    ctaHref={cta_banner.cta_href}
+  />
+
 </BaseLayout>
