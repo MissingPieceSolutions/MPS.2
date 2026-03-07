@@ -85,5 +85,8 @@
     }, { once: true });
   }
 
+  // Run on initial page load
+  document.addEventListener('DOMContentLoaded', initScrollProgress);
+  // Re-run after Astro View Transitions navigation (if ClientRouter is added later)
   document.addEventListener('astro:page-load', initScrollProgress);
 </script>

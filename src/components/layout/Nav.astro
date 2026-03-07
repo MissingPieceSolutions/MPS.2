@@ -203,6 +203,8 @@ function isActive(href: string): boolean {
     });
   }
 
-  // Run on initial load and after Astro View Transitions navigation
+  // Run on initial page load
+  document.addEventListener('DOMContentLoaded', initNav);
+  // Re-run after Astro View Transitions navigation (if ClientRouter is added later)
   document.addEventListener('astro:page-load', initNav);
 </script>
