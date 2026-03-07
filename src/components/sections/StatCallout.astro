@@ -1,0 +1,17 @@
+---
+import GlassCard from '../ui/GlassCard.astro';
+
+interface Props {
+  value: string;
+  label: string;
+}
+
+const { value, label } = Astro.props;
+---
+
+<GlassCard>
+  <div class="text-center">
+    <p class="text-3xl md:text-4xl font-bold text-accent">{value}</p>
+    <p class="text-sm text-text-muted mt-1">{label}</p>
+  </div>
+</GlassCard>

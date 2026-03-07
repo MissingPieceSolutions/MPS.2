@@ -1,0 +1,130 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import GlassCard from '../components/ui/GlassCard.astro';
+import Badge from '../components/ui/Badge.astro';
+import SectionHeading from '../components/ui/SectionHeading.astro';
+import Button from '../components/ui/Button.astro';
+import StatCallout from '../components/sections/StatCallout.astro';
+import CtaBanner from '../components/sections/CtaBanner.astro';
+
+const allStudies = await getCollection('caseStudies');
+const entry = allStudies.find((s) => s.id.includes('mps-tourism'))!;
+const { Content, headings } = await render(entry);
+const { title, client_display, industry, services, outcome_headline, tech_stack } = entry.data;
+const tocHeadings = headings.filter((h) => h.depth === 2);
+---
+
+<BaseLayout title="Portfolio | Missing Piece Solutions" description="See how MPS automated quotation generation for a Turkish tour operator — from 2 hours to under 5 minutes.">
+
+  <!-- Case Study Hero -->
+  <section class="bg-bg-base pt-28 pb-16 px-6">
+    <div class="max-w-6xl mx-auto">
+      <SectionHeading
+        eyebrow="Case Study"
+        heading={`Automating Quotations for ${client_display}`}
+      />
+      <div class="flex flex-wrap gap-2 mt-6">
+        <Badge>{industry}</Badge>
+        {services.map((service: string) => (
+          <Badge>{service}</Badge>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Stat Callouts -->
+  <section class="bg-bg-base pb-16 px-6">
+    <div class="flex flex-wrap justify-center gap-6 max-w-4xl mx-auto">
+      <StatCallout value="< 5 min" label="Quotation Time" />
+      <StatCallout value="~24x" label="Faster Than Manual" />
+      <StatCallout value="20+ hrs" label="Freed Per Week" />
+    </div>
+  </section>
+
+  <!-- Two-column layout: TOC + Content -->
+  <section class="bg-surface py-16 px-6">
+    <div class="grid lg:grid-cols-[240px_1fr] gap-12 max-w-6xl mx-auto">
+
+      <!-- Sticky TOC sidebar (desktop only) -->
+      <aside class="hidden lg:block">
+        <nav class="sticky top-24 space-y-3" aria-label="Table of contents">
+          {tocHeadings.map((h) => (
+            <a
+              href={`#${h.slug}`}
+              data-toc-link
+              class="block text-sm text-text-muted hover:text-text-primary transition-colors"
+            >
+              {h.text}
+            </a>
+          ))}
+        </nav>
+      </aside>
+
+      <!-- Article content -->
+      <article class="
+        [&>h2]:text-2xl [&>h2]:font-bold [&>h2]:text-text-primary [&>h2]:mt-12 [&>h2]:mb-4 [&>h2]:scroll-mt-24
+        [&>h3]:text-xl [&>h3]:font-semibold [&>h3]:text-text-primary [&>h3]:mt-8 [&>h3]:mb-3
+        [&>p]:text-text-muted [&>p]:leading-relaxed [&>p]:mb-4
+        [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:text-text-muted [&>ul]:mb-4
+        [&>hr]:border-white/10 [&>hr]:my-8
+        [&>p>strong]:text-text-primary
+      ">
+        <Content />
+      </article>
+    </div>
+  </section>
+
+  <!-- Tech Stack -->
+  <section class="bg-bg-base py-16 px-6">
+    <div class="max-w-6xl mx-auto text-center">
+      <p class="text-lg font-semibold text-text-muted mb-4">Built With</p>
+      <div class="flex flex-wrap justify-center gap-3">
+        {tech_stack.map((tech: string) => (
+          <Badge variant="muted">{tech}</Badge>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom CTA -->
+  <CtaBanner
+    heading="Have a Process Worth Automating?"
+    subtext="Tell us about it — we'll show you what's possible."
+    ctaLabel="Start a Conversation"
+    ctaHref="/contact"
+  />
+
+</BaseLayout>
+
+<script>
+  function initScrollSpy() {
+    const links = document.querySelectorAll('[data-toc-link]');
+    if (!links.length) return;
+
+    const headings = document.querySelectorAll('article h2');
+    if (!headings.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const id = entry.target.id;
+            links.forEach((link) => {
+              link.classList.remove('text-accent');
+              if (link.getAttribute('href') === `#${id}`) {
+                link.classList.add('text-accent');
+              }
+            });
+          }
+        });
+      },
+      { rootMargin: '-80px 0px -60% 0px' }
+    );
+
+    headings.forEach((heading) => observer.observe(heading));
+  }
+
+  document.addEventListener('DOMContentLoaded', initScrollSpy);
+  document.addEventListener('astro:page-load', initScrollSpy);
+</script>
