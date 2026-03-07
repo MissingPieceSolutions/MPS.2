@@ -1,0 +1,65 @@
+---
+import { getEntry } from 'astro:content';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import SectionHeading from '../components/ui/SectionHeading.astro';
+import FounderCard from '../components/sections/FounderCard.astro';
+
+const entry = await getEntry('pages', 'about');
+if (!entry) throw new Error('About page content not found');
+const { title, description, story, founders, cta } = entry.data;
+---
+
+<BaseLayout title={title} description={description}>
+  <!-- Page Header -->
+  <section class="bg-bg-base py-24 px-6">
+    <div class="max-w-6xl mx-auto">
+      <SectionHeading
+        eyebrow="About Us"
+        heading={title}
+        align="center"
+      />
+    </div>
+  </section>
+
+  <!-- Company Story -->
+  <section class="bg-bg-base pb-16 px-6">
+    <div class="max-w-3xl mx-auto">
+      <h3 class="text-2xl font-semibold text-text-primary mb-6">{story.heading}</h3>
+      <p class="text-lg text-text-muted leading-relaxed">{story.text}</p>
+    </div>
+  </section>
+
+  <!-- Founders -->
+  <section class="bg-surface py-24 px-6">
+    <div class="max-w-4xl mx-auto">
+      <SectionHeading
+        eyebrow="The Team"
+        heading="Meet the Founders"
+        align="center"
+        class="mb-16"
+      />
+      <div class="grid md:grid-cols-3 gap-12 max-w-4xl mx-auto">
+        {founders.map((founder: any) => (
+          <FounderCard
+            name={founder.name}
+            role={founder.role}
+            bio={founder.bio}
+            linkedin={founder.linkedin}
+            initials={founder.initials}
+            photo={founder.photo}
+          />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Subtle CTA -->
+  <section class="py-16 px-6 text-center">
+    <p class="text-text-muted">
+      {cta.text}{' '}
+      <a href={cta.href} class="text-accent hover:underline transition-colors">
+        {cta.label} &rarr;
+      </a>
+    </p>
+  </section>
+</BaseLayout>
