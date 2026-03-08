@@ -7,7 +7,11 @@ import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
   site: 'https://mps-2.pages.dev', // Update to custom domain when registered
-  integrations: [sitemap()],
+  integrations: [
+    sitemap({
+      filter: (page) => !page.includes('/404'),
+    }),
+  ],
   vite: {
     plugins: [tailwindcss()],
   },
