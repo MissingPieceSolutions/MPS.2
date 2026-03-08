@@ -23,7 +23,7 @@ const breadcrumbSchema = {
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 
   <!-- Page Header -->
-  <section class="bg-bg-base py-24 px-6">
+  <section class="bg-bg-base py-24 px-6" data-reveal="fade">
     <div class="max-w-6xl mx-auto">
       <SectionHeading
         eyebrow="About Us"
@@ -34,7 +34,7 @@ const breadcrumbSchema = {
   </section>
 
   <!-- Company Story -->
-  <section class="bg-bg-base pb-16 px-6">
+  <section class="bg-bg-base pb-16 px-6" data-reveal="fade-up">
     <div class="max-w-3xl mx-auto">
       <h3 class="text-2xl font-semibold text-text-primary mb-6">{story.heading}</h3>
       <p class="text-lg text-text-muted leading-relaxed">{story.text}</p>
@@ -51,25 +51,27 @@ const breadcrumbSchema = {
         class="mb-16"
       />
       <div class="grid md:grid-cols-3 gap-12 max-w-4xl mx-auto">
-        {founders.map((founder: any) => (
-          <FounderCard
-            name={founder.name}
-            role={founder.role}
-            bio={founder.bio}
-            linkedin={founder.linkedin}
-            initials={founder.initials}
-            photo={founder.photo}
-          />
+        {founders.map((founder: any, i: number) => (
+          <div data-reveal="fade-up" style={`--reveal-delay: ${i * 150}ms`}>
+            <FounderCard
+              name={founder.name}
+              role={founder.role}
+              bio={founder.bio}
+              linkedin={founder.linkedin}
+              initials={founder.initials}
+              photo={founder.photo}
+            />
+          </div>
         ))}
       </div>
     </div>
   </section>
 
   <!-- Subtle CTA -->
-  <section class="py-16 px-6 text-center">
+  <section class="py-16 px-6 text-center" data-reveal="fade">
     <p class="text-text-muted">
       {cta.text}{' '}
-      <a href={cta.href} class="text-accent hover:underline transition-colors">
+      <a href={cta.href} class="link-accent font-medium">
         {cta.label} &rarr;
       </a>
     </p>

@@ -48,18 +48,20 @@ const schema = {
   <TrustBar />
 
   <!-- 3. Services Overview -->
-  <section class="bg-bg-base py-24 px-6">
+  <section class="bg-bg-base py-24 px-6" data-reveal="fade-up">
     <div class="max-w-6xl mx-auto space-y-12">
       <SectionHeading eyebrow="Services" heading={services_preview.heading} align="center" />
       <div class="grid md:grid-cols-3 gap-8">
-        {services_preview.items.map((service: { name: string; blurb: string }) => (
-          <GlassCard hover>
-            <div class="space-y-4">
-              <h3 class="text-lg font-semibold text-text-primary">{service.name}</h3>
-              <p class="text-sm text-text-muted leading-relaxed">{service.blurb}</p>
-              <Button href="/services" variant="ghost" size="sm">Learn more</Button>
-            </div>
-          </GlassCard>
+        {services_preview.items.map((service: { name: string; blurb: string }, i: number) => (
+          <div data-reveal="fade-up" style={`--reveal-delay: ${i * 120}ms`}>
+            <GlassCard hover>
+              <div class="space-y-4">
+                <h3 class="text-lg font-semibold text-text-primary">{service.name}</h3>
+                <p class="text-sm text-text-muted leading-relaxed">{service.blurb}</p>
+                <Button href="/services" variant="ghost" size="sm">Learn more</Button>
+              </div>
+            </GlassCard>
+          </div>
         ))}
       </div>
     </div>
@@ -67,7 +69,7 @@ const schema = {
 
   <!-- 4. Portfolio Teaser -->
   <section class="bg-surface py-24 px-6">
-    <div class="max-w-6xl mx-auto space-y-8">
+    <div class="max-w-6xl mx-auto space-y-8" data-reveal="slide-left">
       <SectionHeading eyebrow="Portfolio" heading={portfolio_teaser.heading} />
       <div class="space-y-6">
         <Badge>{portfolio_teaser.project_name}</Badge>
@@ -85,13 +87,13 @@ const schema = {
   </section>
 
   <!-- 5. About Preview -->
-  <section class="bg-bg-base py-24 px-6">
+  <section class="bg-bg-base py-24 px-6" data-reveal="fade-up">
     <div class="max-w-6xl mx-auto space-y-6">
       <SectionHeading eyebrow="About" heading={about_preview.heading} />
       <p class="text-text-muted text-lg max-w-2xl leading-relaxed">
         {about_preview.text}
       </p>
-      <a href={about_preview.cta_href} class="inline-block text-accent hover:underline font-medium">
+      <a href={about_preview.cta_href} class="inline-block link-accent font-medium">
         {about_preview.cta_label} &rarr;
       </a>
     </div>

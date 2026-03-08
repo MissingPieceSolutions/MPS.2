@@ -50,7 +50,7 @@ const schema = {
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(schema)} />
 
   <!-- Page Header -->
-  <section class="bg-bg-base py-24 px-6">
+  <section class="bg-bg-base py-24 px-6" data-reveal="fade">
     <div class="max-w-6xl mx-auto">
       <SectionHeading
         eyebrow="Our Services"
@@ -64,7 +64,8 @@ const schema = {
   <!-- Services Grid -->
   <section class="bg-surface py-24 px-6">
     <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-      {services.map((svc: any) => (
+      {services.map((svc: any, i: number) => (
+        <div data-reveal="fade-up" style={`--reveal-delay: ${i * 120}ms`}>
         <GlassCard hover>
           <div class="flex flex-col h-full space-y-4">
             <h3 class="text-xl font-semibold text-text-primary">{svc.name}</h3>
@@ -91,6 +92,7 @@ const schema = {
             </div>
           </div>
         </GlassCard>
+        </div>
       ))}
     </div>
   </section>

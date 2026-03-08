@@ -31,7 +31,7 @@ const breadcrumbSchema = {
 // Convert markdown link in privacy_note to HTML anchor
 const privacyHtml = (privacy_note as string).replace(
   /\[([^\]]+)\]\(([^)]+)\)/g,
-  '<a href="$2" class="text-accent hover:underline">$1</a>'
+  '<a href="$2" class="link-accent">$1</a>'
 );
 ---
 
@@ -39,7 +39,7 @@ const privacyHtml = (privacy_note as string).replace(
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 
   <!-- Page header -->
-  <section class="bg-bg-base pt-28 pb-8 px-6">
+  <section class="bg-bg-base pt-28 pb-8 px-6" data-reveal="fade">
     <div class="max-w-3xl mx-auto">
       <SectionHeading
         eyebrow="Contact"
@@ -51,7 +51,7 @@ const privacyHtml = (privacy_note as string).replace(
   </section>
 
   <!-- Form section -->
-  <section class="bg-bg-base pb-24 px-6">
+  <section class="bg-bg-base pb-24 px-6" data-reveal="fade-up">
     <div class="max-w-xl mx-auto">
       <GlassCard>
         <form id="contact-form" action={FORMSPREE_ENDPOINT} method="POST">

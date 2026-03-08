@@ -39,7 +39,7 @@ const portfolioSchema = {
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(portfolioSchema)} />
 
   <!-- Case Study Hero -->
-  <section class="bg-bg-base pt-28 pb-16 px-6">
+  <section class="bg-bg-base pt-28 pb-16 px-6" data-reveal="fade">
     <div class="max-w-6xl mx-auto">
       <SectionHeading
         eyebrow="Case Study"
@@ -57,14 +57,14 @@ const portfolioSchema = {
   <!-- Stat Callouts -->
   <section class="bg-bg-base pb-16 px-6">
     <div class="flex flex-wrap justify-center gap-6 max-w-4xl mx-auto">
-      <StatCallout value="< 5 min" label="Quotation Time" />
-      <StatCallout value="~24x" label="Faster Than Manual" />
-      <StatCallout value="20+ hrs" label="Freed Per Week" />
+      <div data-reveal="scale" style="--reveal-delay: 0ms"><StatCallout value="< 5 min" label="Quotation Time" /></div>
+      <div data-reveal="scale" style="--reveal-delay: 100ms"><StatCallout value="~24x" label="Faster Than Manual" /></div>
+      <div data-reveal="scale" style="--reveal-delay: 200ms"><StatCallout value="20+ hrs" label="Freed Per Week" /></div>
     </div>
   </section>
 
   <!-- Two-column layout: TOC + Content -->
-  <section class="bg-surface py-16 px-6">
+  <section class="bg-surface py-16 px-6" data-reveal="fade-up">
     <div class="grid lg:grid-cols-[240px_1fr] gap-12 max-w-6xl mx-auto">
 
       <!-- Sticky TOC sidebar (desktop only) -->
@@ -97,7 +97,7 @@ const portfolioSchema = {
   </section>
 
   <!-- Tech Stack -->
-  <section class="bg-bg-base py-16 px-6">
+  <section class="bg-bg-base py-16 px-6" data-reveal="fade">
     <div class="max-w-6xl mx-auto text-center">
       <p class="text-lg font-semibold text-text-muted mb-4">Built With</p>
       <div class="flex flex-wrap justify-center gap-3">
