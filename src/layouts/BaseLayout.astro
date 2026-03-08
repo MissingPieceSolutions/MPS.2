@@ -1,4 +1,5 @@
 ---
+import { ClientRouter } from 'astro:transitions';
 import '@fontsource-variable/space-grotesk';
 import '@fontsource-variable/jetbrains-mono';
 import '../styles/global.css';
@@ -23,11 +24,23 @@ const {
 
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
 const ogImageUrl = new URL(ogImage, Astro.site).href;
+
+const blurTransition = {
+  forwards: {
+    old: [{ name: 'page-blur-out', duration: '300ms', easing: 'ease-in', fillMode: 'forwards' }],
+    new: [{ name: 'page-blur-in', duration: '300ms', easing: 'ease-out', fillMode: 'backwards', delay: '150ms' }],
+  },
+  backwards: {
+    old: [{ name: 'page-blur-out', duration: '300ms', easing: 'ease-in', fillMode: 'forwards' }],
+    new: [{ name: 'page-blur-in', duration: '300ms', easing: 'ease-out', fillMode: 'backwards', delay: '150ms' }],
+  },
+};
 ---
 
 <!doctype html>
 <html lang="en" class="scroll-smooth scroll-pt-20">
   <head>
+    <ClientRouter />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
@@ -57,11 +70,20 @@ const ogImageUrl = new URL(ogImage, Astro.site).href;
     <title>{title}</title>
   </head>
   <body class="bg-bg-base text-text-primary font-sans antialiased">
-    <Nav />
+    <Nav transition:persist />
     <ScrollProgress />
-    <main>
+    <main transition:animate={blurTransition}>
       <slot />
     </main>
     <Footer />
+
+    <script>
+      import '../scripts/scroll-reveal.ts';
+
+      const originalTitle = document.title;
+      document.addEventListener('visibilitychange', () => {
+        document.title = document.hidden ? 'Missing a piece? \u{1F440}' : originalTitle;
+      });
+    </script>
   </body>
 </html>

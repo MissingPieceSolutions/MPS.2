@@ -11,27 +11,77 @@ interface Props {
 const { headline, subheadline, ctaLabel, ctaHref } = Astro.props;
 ---
 
-<section class="relative min-h-0 md:min-h-dvh flex items-center justify-center bg-bg-base px-6 pt-20 pb-16 md:pb-0 overflow-hidden">
+<section
+  id="hero-section"
+  class="relative min-h-0 md:min-h-dvh flex items-center justify-center bg-bg-base px-6 pt-20 pb-16 md:pb-0 overflow-hidden"
+>
   <!-- Energy ring backdrop -->
   <img
-    src="/logo-energy-ring.png"
+    src="/logo/mps-icon-full.png"
     alt=""
     aria-hidden="true"
-    class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] md:w-[800px] opacity-20 pointer-events-none select-none"
+    class:list={[
+      'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] md:w-[800px] pointer-events-none select-none',
+      'motion-safe:opacity-0 motion-safe:animate-[hero-bg_1200ms_ease-out_forwards]',
+      'motion-reduce:opacity-20',
+    ]}
   />
 
   <!-- Content -->
   <div class="relative z-10 text-center space-y-6 max-w-3xl">
-    <h1 class="text-5xl lg:text-7xl font-bold text-text-primary leading-tight">
+    <h1
+      class:list={[
+        'text-5xl lg:text-7xl font-bold text-text-primary leading-tight',
+        'motion-safe:opacity-0 motion-safe:animate-[hero-headline_800ms_ease-out_400ms_forwards]',
+      ]}
+    >
       {headline}
     </h1>
     <p class="text-lg lg:text-xl text-text-muted max-w-xl mx-auto">
       {subheadline}
     </p>
-    <div class="pt-4">
+    <div
+      class:list={[
+        'pt-4',
+        'motion-safe:opacity-0 motion-safe:animate-[hero-cta_600ms_ease-out_900ms_forwards]',
+      ]}
+    >
       <Button href={ctaHref} variant="primary">
         {ctaLabel}
       </Button>
     </div>
   </div>
 </section>
+
+<script>
+  function initHero() {
+    const hero = document.getElementById('hero-section');
+    if (!hero) return;
+
+    const hasPlayed = sessionStorage.getItem('hero-played');
+    const isSameOrigin = document.referrer && new URL(document.referrer).origin === window.location.origin;
+
+    if (hasPlayed && isSameOrigin) {
+      // Skip entrance animation on back-navigation
+      hero.classList.add('hero-instant');
+    }
+
+    sessionStorage.setItem('hero-played', 'true');
+  }
+
+  document.addEventListener('astro:page-load', initHero);
+
+  // Clear flag on View Transition so it replays on fresh visits
+  document.addEventListener('astro:before-preparation', () => {
+    // Only clear if navigating away from current site
+    // The flag will be re-set when hero loads
+  });
+</script>
+
+<style>
+  .hero-instant :is(img, h1, div) {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+  /* Subheadline is already visible, no animation override needed */
+</style>
