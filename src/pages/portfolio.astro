@@ -1,6 +1,7 @@
 ---
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../config';
 import GlassCard from '../components/ui/GlassCard.astro';
 import Badge from '../components/ui/Badge.astro';
 import SectionHeading from '../components/ui/SectionHeading.astro';
@@ -13,9 +14,29 @@ const entry = allStudies.find((s) => s.id.includes('mps-tourism'))!;
 const { Content, headings } = await render(entry);
 const { title, client_display, industry, services, outcome_headline, tech_stack } = entry.data;
 const tocHeadings = headings.filter((h) => h.depth === 2);
+
+const portfolioSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "CreativeWork",
+      "name": title,
+      "description": `Automating quotations for ${client_display} — from 2 hours to under 5 minutes.`,
+      "author": { "@type": "Organization", "name": SITE.name }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE.url },
+        { "@type": "ListItem", "position": 2, "name": "Portfolio", "item": `${SITE.url}/portfolio` }
+      ]
+    }
+  ]
+};
 ---
 
 <BaseLayout title="Portfolio | Missing Piece Solutions" description="See how MPS automated quotation generation for a Turkish tour operator — from 2 hours to under 5 minutes." ogImage="/og/portfolio.png">
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(portfolioSchema)} />
 
   <!-- Case Study Hero -->
   <section class="bg-bg-base pt-28 pb-16 px-6">

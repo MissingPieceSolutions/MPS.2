@@ -1,6 +1,7 @@
 ---
 import { getEntry } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../config';
 import HeroSection from '../components/sections/HeroSection.astro';
 import TrustBar from '../components/sections/TrustBar.astro';
 import CtaBanner from '../components/sections/CtaBanner.astro';
@@ -11,9 +12,29 @@ import Badge from '../components/ui/Badge.astro';
 
 const entry = await getEntry('pages', 'home');
 const { hero, services_preview, portfolio_teaser, about_preview, cta_banner } = entry.data;
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "name": SITE.name,
+      "url": SITE.url,
+      "logo": `${SITE.url}/logo/mps-icon-512.png`,
+      "description": "AI agency that designs, builds, and deploys AI systems for businesses.",
+      "sameAs": []
+    },
+    {
+      "@type": "WebSite",
+      "name": SITE.name,
+      "url": SITE.url
+    }
+  ]
+};
 ---
 
 <BaseLayout title={entry.data.title} description={entry.data.description} ogImage="/og/home.png">
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(schema)} />
 
   <!-- 1. Hero -->
   <HeroSection

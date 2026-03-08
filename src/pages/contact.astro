@@ -3,7 +3,7 @@ import { getEntry } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import GlassCard from '../components/ui/GlassCard.astro';
 import SectionHeading from '../components/ui/SectionHeading.astro';
-import { FORMSPREE_ENDPOINT } from '../config';
+import { FORMSPREE_ENDPOINT, SITE } from '../config';
 
 const entry = await getEntry('pages', 'contact');
 if (!entry) throw new Error('Missing content entry: pages/contact');
@@ -19,6 +19,15 @@ const {
   privacy_note,
 } = entry.data;
 
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE.url },
+    { "@type": "ListItem", "position": 2, "name": "Contact", "item": `${SITE.url}/contact` }
+  ]
+};
+
 // Convert markdown link in privacy_note to HTML anchor
 const privacyHtml = (privacy_note as string).replace(
   /\[([^\]]+)\]\(([^)]+)\)/g,
@@ -27,6 +36,8 @@ const privacyHtml = (privacy_note as string).replace(
 ---
 
 <BaseLayout title={title} description={description} ogImage="/og/contact.png">
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+
   <!-- Page header -->
   <section class="bg-bg-base pt-28 pb-8 px-6">
     <div class="max-w-3xl mx-auto">

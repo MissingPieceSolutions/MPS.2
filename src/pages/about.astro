@@ -3,13 +3,25 @@ import { getEntry } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionHeading from '../components/ui/SectionHeading.astro';
 import FounderCard from '../components/sections/FounderCard.astro';
+import { SITE } from '../config';
 
 const entry = await getEntry('pages', 'about');
 if (!entry) throw new Error('About page content not found');
 const { title, description, story, founders, cta } = entry.data;
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE.url },
+    { "@type": "ListItem", "position": 2, "name": "About", "item": `${SITE.url}/about` }
+  ]
+};
 ---
 
 <BaseLayout title={title} description={description} ogImage="/og/about.png">
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+
   <!-- Page Header -->
   <section class="bg-bg-base py-24 px-6">
     <div class="max-w-6xl mx-auto">

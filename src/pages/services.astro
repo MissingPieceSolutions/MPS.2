@@ -5,13 +5,50 @@ import SectionHeading from '../components/ui/SectionHeading.astro';
 import GlassCard from '../components/ui/GlassCard.astro';
 import Button from '../components/ui/Button.astro';
 import CtaBanner from '../components/sections/CtaBanner.astro';
+import { SITE } from '../config';
 
 const entry = await getEntry('pages', 'services');
 if (!entry) throw new Error('Services page content not found');
 const { title, description, services, cta } = entry.data;
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Service",
+      "name": "AI Workflow Automation",
+      "serviceType": "AI Automation",
+      "provider": { "@type": "Organization", "name": SITE.name },
+      "description": "Automate repetitive business processes with intelligent AI workflows."
+    },
+    {
+      "@type": "Service",
+      "name": "Custom AI Development",
+      "serviceType": "Software Development",
+      "provider": { "@type": "Organization", "name": SITE.name },
+      "description": "Bespoke AI systems designed and built for your specific business needs."
+    },
+    {
+      "@type": "Service",
+      "name": "AI Strategy & Consulting",
+      "serviceType": "Consulting",
+      "provider": { "@type": "Organization", "name": SITE.name },
+      "description": "Strategic guidance on where and how AI can deliver value in your organization."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE.url },
+        { "@type": "ListItem", "position": 2, "name": "Services", "item": `${SITE.url}/services` }
+      ]
+    }
+  ]
+};
 ---
 
 <BaseLayout title={title} description={description} ogImage="/og/services.png">
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(schema)} />
+
   <!-- Page Header -->
   <section class="bg-bg-base py-24 px-6">
     <div class="max-w-6xl mx-auto">
