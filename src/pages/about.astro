@@ -9,7 +9,7 @@ if (!entry) throw new Error('About page content not found');
 const { title, description, story, founders, cta } = entry.data;
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} ogImage="/og/about.png">
   <!-- Page Header -->
   <section class="bg-bg-base py-24 px-6">
     <div class="max-w-6xl mx-auto">

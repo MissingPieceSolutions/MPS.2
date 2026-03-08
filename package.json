@@ -15,5 +15,8 @@
     "@tailwindcss/vite": "^4.2.1",
     "astro": "^5.17.1",
     "tailwindcss": "^4.2.1"
+  },
+  "devDependencies": {
+    "canvas": "^3.2.1"
   }
 }

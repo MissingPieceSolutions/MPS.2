@@ -11,7 +11,7 @@ if (!entry) throw new Error('Services page content not found');
 const { title, description, services, cta } = entry.data;
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} ogImage="/og/services.png">
   <!-- Page Header -->
   <section class="bg-bg-base py-24 px-6">
     <div class="max-w-6xl mx-auto">
