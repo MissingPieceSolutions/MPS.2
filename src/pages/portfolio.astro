@@ -54,7 +54,7 @@ const breadcrumbSchema = {
             <line x1="3" y1="18" x2="3.01" y2="18" />
           </svg>
         </button>
-        <span id="label-list" class="text-white text-xs font-mono cursor-pointer transition-colors duration-300">categorized</span>
+        <span id="label-list" class="text-white text-xs font-mono cursor-pointer transition-colors duration-300" role="button" tabindex="0">categorized</span>
 
         <span class="text-text-muted text-xs font-mono">/</span>
 
@@ -67,20 +67,28 @@ const breadcrumbSchema = {
             <rect x="14" y="14" width="7" height="7" />
           </svg>
         </button>
-        <span id="label-grid" class="text-text-muted text-xs font-mono cursor-pointer transition-colors duration-300">freestyle</span>
+        <span id="label-grid" class="text-text-muted text-xs font-mono cursor-pointer transition-colors duration-300" role="button" tabindex="0">freestyle</span>
       </div>
     </div>
   </section>
 
-  <!-- List View (default) -->
-  <div id="view-list" class="max-w-6xl mx-auto transition-opacity duration-500">
-    <PortfolioList projects={projects} />
-  </div>
+  {projects.length === 0 ? (
+    <div class="max-w-6xl mx-auto px-6 py-32 text-center">
+      <p class="text-text-muted text-lg">No projects yet — check back soon.</p>
+    </div>
+  ) : (
+    <>
+      <!-- List View (default) -->
+      <div id="view-list" class="max-w-6xl mx-auto transition-opacity duration-500">
+        <PortfolioList projects={projects} />
+      </div>
 
-  <!-- Grid View (hidden) -->
-  <div id="view-grid" class="max-w-6xl mx-auto transition-opacity duration-500 hidden opacity-0">
-    <PortfolioGrid projects={projects} />
-  </div>
+      <!-- Grid View (hidden) -->
+      <div id="view-grid" class="max-w-6xl mx-auto transition-opacity duration-500 hidden opacity-0">
+        <PortfolioGrid projects={projects} />
+      </div>
+    </>
+  )}
 
   <!-- Bottom CTA -->
   <div data-reveal="scale">
@@ -96,7 +104,16 @@ const breadcrumbSchema = {
 <script>
   import gsap from 'gsap';
 
+  let activeTweens: gsap.core.Tween[] = [];
+
+  function cleanupTweens() {
+    activeTweens.forEach((t) => t.kill());
+    activeTweens = [];
+  }
+
   function setupViewToggle() {
+    cleanupTweens();
+
     const btnList = document.getElementById('btn-list');
     const btnGrid = document.getElementById('btn-grid');
     const labelList = document.getElementById('label-list');
@@ -110,6 +127,8 @@ const breadcrumbSchema = {
 
     function switchTo(target: 'list' | 'grid') {
       if (target === currentView) return;
+
+      cleanupTweens();
 
       const fadeOut = target === 'grid' ? viewList : viewGrid;
       const fadeIn = target === 'grid' ? viewGrid : viewList;
@@ -130,15 +149,17 @@ const breadcrumbSchema = {
       inactiveLabel.classList.add('text-text-muted');
 
       // Animate transition
-      gsap.to(fadeOut, {
+      const tweenOut = gsap.to(fadeOut, {
         opacity: 0,
         duration: 0.3,
         onComplete: () => {
           fadeOut.classList.add('hidden');
           fadeIn.classList.remove('hidden');
-          gsap.to(fadeIn, { opacity: 1, duration: 0.3 });
+          const tweenIn = gsap.to(fadeIn, { opacity: 1, duration: 0.3 });
+          activeTweens.push(tweenIn);
         },
       });
+      activeTweens.push(tweenOut);
 
       currentView = target;
     }
@@ -147,7 +168,18 @@ const breadcrumbSchema = {
     btnGrid.addEventListener('click', () => switchTo('grid'));
     labelList.addEventListener('click', () => switchTo('list'));
     labelGrid.addEventListener('click', () => switchTo('grid'));
+
+    // Keyboard support for label spans
+    function onKeyActivate(e: KeyboardEvent, target: 'list' | 'grid') {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        switchTo(target);
+      }
+    }
+    labelList.addEventListener('keydown', (e) => onKeyActivate(e as KeyboardEvent, 'list'));
+    labelGrid.addEventListener('keydown', (e) => onKeyActivate(e as KeyboardEvent, 'grid'));
   }
 
   document.addEventListener('astro:page-load', setupViewToggle);
+  document.addEventListener('astro:before-preparation', cleanupTweens);
 </script>
