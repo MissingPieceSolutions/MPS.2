@@ -1,151 +1,153 @@
 ---
-import { getCollection, render } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { SITE } from '../config';
-import GlassCard from '../components/ui/GlassCard.astro';
-import Badge from '../components/ui/Badge.astro';
-import SectionHeading from '../components/ui/SectionHeading.astro';
-import Button from '../components/ui/Button.astro';
-import StatCallout from '../components/sections/StatCallout.astro';
+import PortfolioList from '../components/sections/PortfolioList.astro';
+import PortfolioGrid from '../components/sections/PortfolioGrid.astro';
 import CtaBanner from '../components/sections/CtaBanner.astro';
+import { getCollection } from 'astro:content';
+import { SITE } from '../config';
 
 const allStudies = await getCollection('caseStudies');
-const entry = allStudies.find((s) => s.id.includes('mps-tourism'))!;
-const { Content, headings } = await render(entry);
-const { title, client_display, industry, services, outcome_headline, tech_stack } = entry.data;
-const tocHeadings = headings.filter((h) => h.depth === 2);
 
-const portfolioSchema = {
+const projects = allStudies.map((study) => ({
+  slug: study.id,
+  title: study.data.title,
+  client_display: study.data.client_display || 'Client project',
+  industry: study.data.industry || 'Technology',
+  services: study.data.services || [],
+  outcome_headline: study.data.outcome_headline || '',
+  description: study.data.summary || study.data.outcome_headline || '',
+  year: '2025',
+  image: '/assets/case-studies/mps-tourism/quotation-output.png',
+}));
+
+const breadcrumbSchema = {
   "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "CreativeWork",
-      "name": title,
-      "description": `Automating quotations for ${client_display} — from 2 hours to under 5 minutes.`,
-      "author": { "@type": "Organization", "name": SITE.name }
-    },
-    {
-      "@type": "BreadcrumbList",
-      "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE.url },
-        { "@type": "ListItem", "position": 2, "name": "Portfolio", "item": `${SITE.url}/portfolio` }
-      ]
-    }
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE.url },
+    { "@type": "ListItem", "position": 2, "name": "Portfolio", "item": `${SITE.url}/portfolio` }
   ]
 };
 ---
 
-<BaseLayout title="Portfolio | Missing Piece Solutions" description="See how MPS automated quotation generation for a Turkish tour operator — from 2 hours to under 5 minutes." ogImage="/og/portfolio.png">
-  <script slot="head" type="application/ld+json" set:html={JSON.stringify(portfolioSchema)} />
+<BaseLayout title={`Portfolio — ${SITE.name}`} description="Our work — real projects with real outcomes.">
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 
-  <!-- Case Study Hero -->
-  <section class="bg-bg-base pt-28 pb-16 px-6" data-reveal="fade">
-    <div class="max-w-6xl mx-auto">
-      <SectionHeading
-        eyebrow="Case Study"
-        heading={`Automating Quotations for ${client_display}`}
-      />
-      <div class="flex flex-wrap gap-2 mt-6">
-        <Badge>{industry}</Badge>
-        {services.map((service: string) => (
-          <Badge>{service}</Badge>
-        ))}
+  <!-- Header -->
+  <section class="pt-32 pb-8 px-6">
+    <div class="max-w-6xl mx-auto flex items-center justify-between flex-wrap gap-4">
+      <!-- Breadcrumb -->
+      <p class="font-mono text-sm text-text-muted" data-reveal="fade">
+        Missing Piece Solutions / <span class="text-text-primary">Works</span>
+      </p>
+
+      <!-- View Toggle -->
+      <div class="flex items-center gap-3">
+        <!-- List toggle -->
+        <button id="btn-list" class="text-white transition-colors duration-300" aria-label="List view">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6" />
+            <line x1="8" y1="12" x2="21" y2="12" />
+            <line x1="8" y1="18" x2="21" y2="18" />
+            <line x1="3" y1="6" x2="3.01" y2="6" />
+            <line x1="3" y1="12" x2="3.01" y2="12" />
+            <line x1="3" y1="18" x2="3.01" y2="18" />
+          </svg>
+        </button>
+        <span id="label-list" class="text-white text-xs font-mono cursor-pointer transition-colors duration-300">categorized</span>
+
+        <span class="text-text-muted text-xs font-mono">/</span>
+
+        <!-- Grid toggle -->
+        <button id="btn-grid" class="text-text-muted transition-colors duration-300" aria-label="Grid view">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+          </svg>
+        </button>
+        <span id="label-grid" class="text-text-muted text-xs font-mono cursor-pointer transition-colors duration-300">freestyle</span>
       </div>
     </div>
   </section>
 
-  <!-- Stat Callouts -->
-  <section class="bg-bg-base pb-16 px-6">
-    <div class="flex flex-wrap justify-center gap-6 max-w-4xl mx-auto">
-      <div data-reveal="scale" style="--reveal-delay: 0ms"><StatCallout value="< 5 min" label="Quotation Time" /></div>
-      <div data-reveal="scale" style="--reveal-delay: 100ms"><StatCallout value="~24x" label="Faster Than Manual" /></div>
-      <div data-reveal="scale" style="--reveal-delay: 200ms"><StatCallout value="20+ hrs" label="Freed Per Week" /></div>
-    </div>
-  </section>
+  <!-- List View (default) -->
+  <div id="view-list" class="max-w-6xl mx-auto transition-opacity duration-500">
+    <PortfolioList projects={projects} />
+  </div>
 
-  <!-- Two-column layout: TOC + Content -->
-  <section class="bg-surface py-16 px-6" data-reveal="fade-up">
-    <div class="grid lg:grid-cols-[240px_1fr] gap-12 max-w-6xl mx-auto">
-
-      <!-- Sticky TOC sidebar (desktop only) -->
-      <aside class="hidden lg:block">
-        <nav class="sticky top-24 space-y-3" aria-label="Table of contents">
-          {tocHeadings.map((h) => (
-            <a
-              href={`#${h.slug}`}
-              data-toc-link
-              class="block text-sm text-text-muted hover:text-text-primary transition-colors"
-            >
-              {h.text}
-            </a>
-          ))}
-        </nav>
-      </aside>
-
-      <!-- Article content -->
-      <article class="
-        [&>h2]:text-2xl [&>h2]:font-bold [&>h2]:text-text-primary [&>h2]:mt-12 [&>h2]:mb-4 [&>h2]:scroll-mt-24
-        [&>h3]:text-xl [&>h3]:font-semibold [&>h3]:text-text-primary [&>h3]:mt-8 [&>h3]:mb-3
-        [&>p]:text-text-muted [&>p]:leading-relaxed [&>p]:mb-4
-        [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:text-text-muted [&>ul]:mb-4
-        [&>hr]:border-white/10 [&>hr]:my-8
-        [&>p>strong]:text-text-primary
-      ">
-        <Content />
-      </article>
-    </div>
-  </section>
-
-  <!-- Tech Stack -->
-  <section class="bg-bg-base py-16 px-6" data-reveal="fade">
-    <div class="max-w-6xl mx-auto text-center">
-      <p class="text-lg font-semibold text-text-muted mb-4">Built With</p>
-      <div class="flex flex-wrap justify-center gap-3">
-        {tech_stack.map((tech: string) => (
-          <Badge variant="muted">{tech}</Badge>
-        ))}
-      </div>
-    </div>
-  </section>
+  <!-- Grid View (hidden) -->
+  <div id="view-grid" class="max-w-6xl mx-auto transition-opacity duration-500 hidden opacity-0">
+    <PortfolioGrid projects={projects} />
+  </div>
 
   <!-- Bottom CTA -->
-  <CtaBanner
-    heading="Have a Process Worth Automating?"
-    subtext="Tell us about it — we'll show you what's possible."
-    ctaLabel="Start a Conversation"
-    ctaHref="/contact"
-  />
-
+  <div data-reveal="scale">
+    <CtaBanner
+      heading="Got a project in mind?"
+      subtext="Let's talk about what AI can do for your business."
+      ctaLabel="Start a Conversation"
+      ctaHref="/contact"
+    />
+  </div>
 </BaseLayout>
 
 <script>
-  function initScrollSpy() {
-    const links = document.querySelectorAll('[data-toc-link]');
-    if (!links.length) return;
+  import gsap from 'gsap';
 
-    const headings = document.querySelectorAll('article h2');
-    if (!headings.length) return;
+  function setupViewToggle() {
+    const btnList = document.getElementById('btn-list');
+    const btnGrid = document.getElementById('btn-grid');
+    const labelList = document.getElementById('label-list');
+    const labelGrid = document.getElementById('label-grid');
+    const viewList = document.getElementById('view-list');
+    const viewGrid = document.getElementById('view-grid');
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const id = entry.target.id;
-            links.forEach((link) => {
-              link.classList.remove('text-accent');
-              if (link.getAttribute('href') === `#${id}`) {
-                link.classList.add('text-accent');
-              }
-            });
-          }
-        });
-      },
-      { rootMargin: '-80px 0px -60% 0px' }
-    );
+    if (!btnList || !btnGrid || !labelList || !labelGrid || !viewList || !viewGrid) return;
 
-    headings.forEach((heading) => observer.observe(heading));
+    let currentView: 'list' | 'grid' = 'list';
+
+    function switchTo(target: 'list' | 'grid') {
+      if (target === currentView) return;
+
+      const fadeOut = target === 'grid' ? viewList : viewGrid;
+      const fadeIn = target === 'grid' ? viewGrid : viewList;
+
+      // Update active states
+      const activeBtn = target === 'list' ? btnList : btnGrid;
+      const inactiveBtn = target === 'list' ? btnGrid : btnList;
+      const activeLabel = target === 'list' ? labelList : labelGrid;
+      const inactiveLabel = target === 'list' ? labelGrid : labelList;
+
+      activeBtn.classList.remove('text-text-muted');
+      activeBtn.classList.add('text-white');
+      inactiveBtn.classList.remove('text-white');
+      inactiveBtn.classList.add('text-text-muted');
+      activeLabel.classList.remove('text-text-muted');
+      activeLabel.classList.add('text-white');
+      inactiveLabel.classList.remove('text-white');
+      inactiveLabel.classList.add('text-text-muted');
+
+      // Animate transition
+      gsap.to(fadeOut, {
+        opacity: 0,
+        duration: 0.3,
+        onComplete: () => {
+          fadeOut.classList.add('hidden');
+          fadeIn.classList.remove('hidden');
+          gsap.to(fadeIn, { opacity: 1, duration: 0.3 });
+        },
+      });
+
+      currentView = target;
+    }
+
+    btnList.addEventListener('click', () => switchTo('list'));
+    btnGrid.addEventListener('click', () => switchTo('grid'));
+    labelList.addEventListener('click', () => switchTo('list'));
+    labelGrid.addEventListener('click', () => switchTo('grid'));
   }
 
-  document.addEventListener('DOMContentLoaded', initScrollSpy);
-  document.addEventListener('astro:page-load', initScrollSpy);
+  document.addEventListener('astro:page-load', setupViewToggle);
 </script>
