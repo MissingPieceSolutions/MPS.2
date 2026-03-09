@@ -1,0 +1,155 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../config';
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": SITE.url },
+    { "@type": "ListItem", "position": 2, "name": "Experience", "item": `${SITE.url}/experience` }
+  ]
+};
+
+const sections = [
+  {
+    number: '001',
+    headline: 'WE FIND THE PIECES',
+    description: 'Every business has processes that drain time and talent. We identify exactly where AI creates real leverage — not buzzwords, not demos, real impact.',
+    align: 'left' as const,
+  },
+  {
+    number: '002',
+    headline: 'WE CONNECT THEM',
+    description: 'Custom AI workflows that talk to your existing tools. Automation that runs itself. Systems that turn hours of manual work into minutes.',
+    align: 'right' as const,
+  },
+  {
+    number: '003',
+    headline: 'ORBIT ACHIEVED',
+    description: 'Your operations running at full capacity. Your team focused on what matters. Your competitors wondering how you move so fast.',
+    align: 'left' as const,
+  },
+];
+---
+
+<BaseLayout
+  title={`Experience — ${SITE.name}`}
+  description="Discover how Missing Piece Solutions finds, connects, and launches AI systems that transform your business operations."
+  ogImage="/og/home.png"
+>
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(schema)} />
+
+  <!-- Fixed full-screen canvas — Three.js particles behind all content -->
+  <div id="experience-canvas" class="fixed inset-0 z-0"></div>
+
+  <!-- Scrollable content overlay -->
+  <div class="relative z-10">
+
+    <!-- Spacer: initial breathing room before first section -->
+    <div class="h-[50vh]"></div>
+
+    <!-- Numbered sections -->
+    {sections.map((section, i) => (
+      <section class={`h-screen flex items-center px-6 md:px-12 lg:px-20 ${section.align === 'right' ? 'justify-end' : 'justify-start'}`}>
+        <div class={`max-w-xl ${section.align === 'right' ? 'text-right' : 'text-left'}`} data-reveal="fade-up" style={`--reveal-delay: ${i * 100}ms`}>
+          <span class="font-mono text-sm text-accent tracking-widest">{section.number}</span>
+          <h2 class="mt-2 text-5xl lg:text-8xl font-bold uppercase leading-none text-text-primary">
+            {section.headline}
+          </h2>
+          <p class="mt-6 text-lg text-text-muted max-w-md inline-block">
+            {section.description}
+          </p>
+        </div>
+      </section>
+    ))}
+
+    <!-- Giant typography at bottom -->
+    <section class="h-screen flex items-center justify-center px-6">
+      <h2
+        class="text-[8vw] font-bold uppercase text-text-primary leading-none text-center tracking-tight"
+        data-reveal="scale"
+      >
+        MISSING PIECE<br />SOLUTIONS
+      </h2>
+    </section>
+
+    <!-- Footer nav links -->
+    <section class="pb-24 pt-12 px-6 flex flex-wrap items-center justify-center gap-6 md:gap-10">
+      <a href="/services" class="link-accent font-mono text-sm uppercase tracking-widest">Services</a>
+      <a href="/portfolio" class="link-accent font-mono text-sm uppercase tracking-widest">Portfolio</a>
+      <a href="/about" class="link-accent font-mono text-sm uppercase tracking-widest">About</a>
+      <a href="/contact" class="link-accent font-mono text-sm uppercase tracking-widest">Contact</a>
+    </section>
+  </div>
+
+  <!-- Fixed counters — bottom-right -->
+  <div id="experience-counters" class="fixed bottom-6 right-6 z-20 font-mono text-sm text-text-muted space-y-2 pointer-events-none">
+    <div>
+      <span class="uppercase tracking-widest text-xs">Progress</span>
+      <div class="text-2xl font-bold text-text-primary" id="counter-progress">0</div>
+    </div>
+    <div>
+      <span class="uppercase tracking-widest text-xs">Velocity</span>
+      <div class="text-2xl font-bold text-text-primary" id="counter-velocity">0.00</div>
+    </div>
+  </div>
+
+  <script>
+    import { initParticleExperience } from '../scripts/particle-experience';
+
+    let experience: ReturnType<typeof initParticleExperience> | null = null;
+    let counterRAF = 0;
+
+    function setup() {
+      const container = document.getElementById('experience-canvas');
+      const progressEl = document.getElementById('counter-progress');
+      const velocityEl = document.getElementById('counter-velocity');
+      const countersEl = document.getElementById('experience-counters');
+      if (!container) return;
+
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (prefersReduced) {
+        // Hide the canvas and counters — show all content immediately
+        container.style.display = 'none';
+        if (countersEl) countersEl.style.display = 'none';
+        return;
+      }
+
+      experience = initParticleExperience(container);
+
+      // Counter updates
+      let lastScroll = 0;
+      let smoothVelocity = 0;
+
+      function updateCounters() {
+        counterRAF = requestAnimationFrame(updateCounters);
+
+        const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+        const progress = maxScroll > 0 ? window.scrollY / maxScroll : 0;
+
+        // Velocity = change in scroll per frame
+        const rawVelocity = Math.abs(progress - lastScroll) * 100;
+        smoothVelocity += (rawVelocity - smoothVelocity) * 0.1;
+        lastScroll = progress;
+
+        if (progressEl) progressEl.textContent = Math.round(progress * 100).toString();
+        if (velocityEl) velocityEl.textContent = smoothVelocity.toFixed(2);
+      }
+
+      updateCounters();
+    }
+
+    function cleanup() {
+      cancelAnimationFrame(counterRAF);
+      if (experience) {
+        experience.destroy();
+        experience = null;
+      }
+    }
+
+    document.addEventListener('astro:page-load', setup);
+    document.addEventListener('astro:before-preparation', cleanup);
+  </script>
+</BaseLayout>
