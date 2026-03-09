@@ -13,6 +13,10 @@ interface Props {
   description?: string;
   ogImage?: string;
   ogType?: string;
+  /** Hide the standard site nav (for immersive pages like the gate) */
+  hideNav?: boolean;
+  /** Hide the standard site footer (for immersive pages) */
+  hideFooter?: boolean;
 }
 
 const {
@@ -20,6 +24,8 @@ const {
   description = SITE.description,
   ogImage = SITE.ogImageDefault,
   ogType = 'website',
+  hideNav = false,
+  hideFooter = false,
 } = Astro.props;
 
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
@@ -70,12 +76,12 @@ const blurTransition = {
     <title>{title}</title>
   </head>
   <body class="bg-bg-base text-text-primary font-sans antialiased">
-    <Nav transition:persist />
-    <ScrollProgress />
+    {!hideNav && <Nav transition:persist />}
+    {!hideNav && <ScrollProgress />}
     <main transition:animate={blurTransition}>
       <slot />
     </main>
-    <Footer />
+    {!hideFooter && <Footer />}
 
     <script>
       import '../scripts/scroll-reveal.ts';

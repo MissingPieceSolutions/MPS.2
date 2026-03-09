@@ -22,7 +22,7 @@ const schema = {
 };
 ---
 
-<BaseLayout title={`${SITE.name} — AI Agency`} description={SITE.description} ogImage="/og/home.png">
+<BaseLayout title={`${SITE.name} — AI Agency`} description={SITE.description} ogImage="/og/home.png" hideNav hideFooter>
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(schema)} />
 
   <!-- Full-screen gate — matching slap-apps.de layout -->
