@@ -1,17 +1,6 @@
 ---
-import { getEntry } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE } from '../config';
-import HeroSection from '../components/sections/HeroSection.astro';
-import TrustBar from '../components/sections/TrustBar.astro';
-import CtaBanner from '../components/sections/CtaBanner.astro';
-import GlassCard from '../components/ui/GlassCard.astro';
-import SectionHeading from '../components/ui/SectionHeading.astro';
-import Button from '../components/ui/Button.astro';
-import Badge from '../components/ui/Badge.astro';
-
-const entry = await getEntry('pages', 'home');
-const { hero, services_preview, portfolio_teaser, about_preview, cta_banner } = entry.data;
 
 const schema = {
   "@context": "https://schema.org",
@@ -31,80 +20,130 @@ const schema = {
     }
   ]
 };
+
+const portalCards = [
+  {
+    title: 'Services',
+    description: 'AI strategy, custom builds, and automation that move the needle.',
+    href: '/services',
+  },
+  {
+    title: 'Portfolio',
+    description: 'Real projects, real results — see what we ship.',
+    href: '/portfolio',
+  },
+  {
+    title: 'About',
+    description: 'The team and thinking behind every missing piece.',
+    href: '/about',
+  },
+  {
+    title: 'Contact',
+    description: 'Ready to talk? Let\u2019s figure out your next move.',
+    href: '/contact',
+  },
+];
 ---
 
-<BaseLayout title={entry.data.title} description={entry.data.description} ogImage="/og/home.png">
+<BaseLayout title={`${SITE.name} — AI Agency`} description={SITE.description} ogImage="/og/home.png">
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(schema)} />
 
-  <!-- 1. Hero -->
-  <HeroSection
-    headline={hero.headline}
-    subheadline={hero.subheadline}
-    ctaLabel="Get Started"
-    ctaHref="#cta"
-  />
+  <!-- 1. Particle Gate -->
+  <section id="gate" class="relative h-screen w-full overflow-hidden bg-bg-base">
+    <div id="particle-canvas" class="absolute inset-0"></div>
 
-  <!-- 2. Trust Bar -->
-  <TrustBar />
+    <!-- Overlay text — starts invisible, JS adds .is-visible after convergence -->
+    <div
+      id="gate-overlay"
+      class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-6 opacity-0 transition-opacity duration-1000"
+    >
+      <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold text-text-primary text-center tracking-tight">
+        Missing Piece Solutions
+      </h1>
+      <a
+        href="#portal"
+        class="pointer-events-auto animate-bounce text-text-muted hover:text-accent transition-colors"
+        aria-label="Scroll down"
+      >
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </a>
+    </div>
+  </section>
 
-  <!-- 3. Services Overview -->
-  <section class="bg-bg-base py-24 px-6" data-reveal="fade-up">
-    <div class="max-w-6xl mx-auto space-y-12">
-      <SectionHeading eyebrow="Services" heading={services_preview.heading} align="center" />
-      <div class="grid md:grid-cols-3 gap-8">
-        {services_preview.items.map((service: { name: string; blurb: string }, i: number) => (
-          <div data-reveal="fade-up" style={`--reveal-delay: ${i * 120}ms`}>
-            <GlassCard hover>
-              <div class="space-y-4">
-                <h3 class="text-lg font-semibold text-text-primary">{service.name}</h3>
-                <p class="text-sm text-text-muted leading-relaxed">{service.blurb}</p>
-                <Button href="/services" variant="ghost" size="sm">Learn more</Button>
-              </div>
-            </GlassCard>
-          </div>
+  <!-- 2. Navigation Portal -->
+  <section id="portal" class="bg-bg-base py-32 px-6">
+    <div class="max-w-4xl mx-auto space-y-16 text-center">
+      <div class="space-y-6">
+        <h2 class="text-4xl lg:text-6xl font-bold text-text-primary" data-reveal="fade-up">
+          Build AI That Delivers
+        </h2>
+        <p
+          class="text-lg lg:text-xl text-text-muted max-w-2xl mx-auto leading-relaxed"
+          data-reveal="fade-up"
+          style="--reveal-delay: 120ms"
+        >
+          We design, build, and deploy AI systems that cut operational drag and unlock capacity your team didn't know it had.
+        </p>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-6">
+        {portalCards.map((card, i) => (
+          <a
+            href={card.href}
+            class="group rounded-2xl bg-surface/60 backdrop-blur-md ring-1 ring-white/10 p-8 text-left transition-all duration-300 hover:-translate-y-1 hover:ring-accent/40 hover:shadow-[0_0_24px_rgba(139,92,246,0.15)]"
+            data-reveal="fade-up"
+            style={`--reveal-delay: ${200 + i * 100}ms`}
+          >
+            <h3 class="text-xl font-semibold text-text-primary mb-2 group-hover:text-accent transition-colors">
+              {card.title}
+            </h3>
+            <p class="text-sm text-text-muted leading-relaxed">{card.description}</p>
+          </a>
         ))}
       </div>
     </div>
   </section>
 
-  <!-- 4. Portfolio Teaser -->
-  <section class="bg-surface py-24 px-6">
-    <div class="max-w-6xl mx-auto space-y-8" data-reveal="slide-left">
-      <SectionHeading eyebrow="Portfolio" heading={portfolio_teaser.heading} />
-      <div class="space-y-6">
-        <Badge>{portfolio_teaser.project_name}</Badge>
-        <p class="text-3xl md:text-4xl font-bold text-text-primary">
-          {portfolio_teaser.outcome}
-        </p>
-        <p class="text-lg text-text-muted max-w-3xl leading-relaxed">
-          {portfolio_teaser.teaser_text}
-        </p>
-        <Button href={portfolio_teaser.cta_href} variant="primary">
-          {portfolio_teaser.cta_label}
-        </Button>
-      </div>
-    </div>
-  </section>
+  <script>
+    import { initParticleGate } from '../scripts/particle-gate';
 
-  <!-- 5. About Preview -->
-  <section class="bg-bg-base py-24 px-6" data-reveal="fade-up">
-    <div class="max-w-6xl mx-auto space-y-6">
-      <SectionHeading eyebrow="About" heading={about_preview.heading} />
-      <p class="text-text-muted text-lg max-w-2xl leading-relaxed">
-        {about_preview.text}
-      </p>
-      <a href={about_preview.cta_href} class="inline-block link-accent font-medium">
-        {about_preview.cta_label} &rarr;
-      </a>
-    </div>
-  </section>
+    let gate: ReturnType<typeof initParticleGate> | null = null;
+    let overlayTimer: ReturnType<typeof setTimeout> | null = null;
 
-  <!-- 6. Bottom CTA -->
-  <CtaBanner
-    heading={cta_banner.heading}
-    subtext={cta_banner.subtext}
-    ctaLabel={cta_banner.cta_label}
-    ctaHref={cta_banner.cta_href}
-  />
+    function setup() {
+      const container = document.getElementById('particle-canvas');
+      const overlay = document.getElementById('gate-overlay');
+      if (!container || !overlay) return;
 
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (prefersReduced) {
+        // Skip animation — show text immediately, no Three.js
+        overlay.classList.remove('opacity-0');
+        return;
+      }
+
+      gate = initParticleGate(container);
+
+      overlayTimer = setTimeout(() => {
+        overlay.classList.remove('opacity-0');
+      }, 3200);
+    }
+
+    function cleanup() {
+      if (overlayTimer) {
+        clearTimeout(overlayTimer);
+        overlayTimer = null;
+      }
+      if (gate) {
+        gate.destroy();
+        gate = null;
+      }
+    }
+
+    document.addEventListener('astro:page-load', setup);
+    document.addEventListener('astro:before-preparation', cleanup);
+  </script>
 </BaseLayout>
