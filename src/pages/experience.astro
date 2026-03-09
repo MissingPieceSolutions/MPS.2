@@ -36,7 +36,7 @@ const sections = [
 <BaseLayout
   title={`Experience — ${SITE.name}`}
   description="Discover how Missing Piece Solutions finds, connects, and launches AI systems that transform your business operations."
-  ogImage="/og/home.png"
+  ogImage="/og/experience.png"
 >
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(schema)} />
 
@@ -47,7 +47,7 @@ const sections = [
   <div class="relative z-10">
 
     <!-- Spacer: initial breathing room before first section -->
-    <div class="h-[50vh]"></div>
+    <div class="h-[50vh]" aria-hidden="true"></div>
 
     <!-- Numbered sections -->
     {sections.map((section, i) => (
@@ -75,12 +75,12 @@ const sections = [
     </section>
 
     <!-- Footer nav links -->
-    <section class="pb-24 pt-12 px-6 flex flex-wrap items-center justify-center gap-6 md:gap-10">
+    <nav class="pb-24 pt-12 px-6 flex flex-wrap items-center justify-center gap-6 md:gap-10">
       <a href="/services" class="link-accent font-mono text-sm uppercase tracking-widest">Services</a>
       <a href="/portfolio" class="link-accent font-mono text-sm uppercase tracking-widest">Portfolio</a>
       <a href="/about" class="link-accent font-mono text-sm uppercase tracking-widest">About</a>
       <a href="/contact" class="link-accent font-mono text-sm uppercase tracking-widest">Contact</a>
-    </section>
+    </nav>
   </div>
 
   <!-- Fixed counters — bottom-right -->

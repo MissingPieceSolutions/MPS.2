@@ -3,9 +3,8 @@
  *
  * A full-screen particle system that transitions between three shapes
  * as the user scrolls through the experience page:
- *   Phase 1 (0–0.33): Flowing wave/stream — "finding the missing pieces"
- *   Phase 2 (0.33–0.66): Network/grid — "connecting systems"
- *   Phase 3 (0.66–1.0): Globe with orbital ring — "achieving orbit"
+ *   Phase 1 (0–0.5): Flowing wave/stream → Network/grid transition
+ *   Phase 2 (0.5–1.0): Network/grid → Globe with orbital ring transition
  *
  * Scroll position is normalised to 0–1 and lerped smoothly (factor 0.04)
  * to drive a uScroll uniform in the vertex shader.
@@ -54,7 +53,7 @@ const vertexShader = /* glsl */ `
     float gridSize = 6.0;
     float spacing = 3.0;
     float total = gridSize * gridSize * gridSize;
-    float i = floor(idx * total);
+    float i = mod(floor(idx * ${PARTICLE_COUNT}.0), total);
     float z = floor(i / (gridSize * gridSize));
     float rem = i - z * gridSize * gridSize;
     float y = floor(rem / gridSize);
@@ -73,11 +72,15 @@ const vertexShader = /* glsl */ `
       // Orbital ring
       float angle = idx * 6.28318 * 5.0 + rnd * 6.28;
       float ringR = radius * 1.3;
-      return vec3(cos(angle) * ringR, sin(angle * 0.3) * 0.3, sin(angle) * ringR);
+      // Tilted orbital ring (~30 degrees) in Y-up scene
+      float tilt = 0.5236; // ~30 degrees
+      float cx = cos(angle) * ringR;
+      float cz = sin(angle) * ringR;
+      return vec3(cx, cz * sin(tilt), cz * cos(tilt));
     }
     // Sphere via fibonacci distribution
     float phi = acos(1.0 - 2.0 * idx);
-    float theta = 3.14159265 * (1.0 + sqrt(5.0)) * idx * 100.0;
+    float theta = acos(-1.0) * (1.0 + sqrt(5.0)) * idx * 100.0;
     return vec3(
       sin(phi) * cos(theta) * radius,
       sin(phi) * sin(theta) * radius,
@@ -111,7 +114,7 @@ const vertexShader = /* glsl */ `
   }
 
   void main() {
-    float phase = uScroll * 3.0; // 0–3
+    float phase = uScroll * 2.0; // 0–2 (two transitions across full scroll)
 
     // Compute positions for all three shapes
     vec3 p1 = waveShape(aIndex, aRandom, uTime);
@@ -285,6 +288,7 @@ export function initParticleExperience(container: HTMLElement): ParticleExperien
 
     geometry.dispose();
     material.dispose();
+    renderer.forceContextLoss();
     renderer.dispose();
 
     if (renderer.domElement.parentNode) {

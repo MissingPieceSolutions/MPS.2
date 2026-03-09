@@ -102,6 +102,9 @@ const navLinks = [
 
       gate = initParticleGate(container);
 
+      // Hide nav links from keyboard until visible
+      nav.querySelectorAll('a').forEach(a => a.setAttribute('tabindex', '-1'));
+
       // After convergence (~3.2s): fade in logo, fade particles down
       logoTimer = setTimeout(() => {
         logo.classList.remove('opacity-0');
@@ -116,6 +119,8 @@ const navLinks = [
       // Show nav links with stagger
       navTimer = setTimeout(() => {
         nav.classList.remove('opacity-0');
+        // Restore keyboard focus now that links are visible
+        nav.querySelectorAll('a').forEach(a => a.removeAttribute('tabindex'));
       }, 4000);
 
       // Scatter on portal link click
@@ -128,6 +133,11 @@ const navLinks = [
       e.preventDefault();
       const target = (e.currentTarget as HTMLAnchorElement).getAttribute('data-href');
       if (!target) return;
+
+      // Clear pending timers immediately to avoid race conditions
+      if (logoTimer) { clearTimeout(logoTimer); logoTimer = null; }
+      if (overlayTimer) { clearTimeout(overlayTimer); overlayTimer = null; }
+      if (navTimer) { clearTimeout(navTimer); navTimer = null; }
 
       if (gate) {
         await gate.scatter();

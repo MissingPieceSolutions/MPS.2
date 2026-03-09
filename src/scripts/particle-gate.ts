@@ -11,7 +11,7 @@
  *   - destroy()       — full cleanup (renderer, geometry, material, listeners, canvas)
  *   - setProgress(p)  — manually override convergence (0 = scattered, 1 = formed)
  *   - fadeOut()        — lower particle global alpha (dissolve behind logo)
- *   - scatter()        — scatter particles outward, returns a Promise resolved after ~500ms
+ *   - scatter()        — scatter particles outward, returns a Promise resolved after ~900ms
  */
 
 import * as THREE from 'three';
@@ -90,13 +90,16 @@ const vertexShader = /* glsl */ `
       pos += dir * scatterDist;
     }
 
+    // Safe normalized target direction (avoid undefined normalize(vec3(0)))
+    vec3 tNorm = length(aTarget) > 0.001 ? normalize(aTarget) : vec3(0.0, 1.0, 0.0);
+
     // Ambient drift — small oscillation after convergence
     float drift = sin(uTime * 1.2 + aDelay * 6.2831) * 0.04 * p;
-    pos += normalize(aTarget) * drift;
+    pos += tNorm * drift;
 
     // Gentle radial pulse on the formed ring
     float pulse = sin(uTime * 0.8) * 0.02 * p;
-    pos += normalize(aTarget) * pulse;
+    pos += tNorm * pulse;
 
     // --- Mouse parallax (stronger on scattered particles) ---
     float parallaxStrength = mix(0.35, 0.06, p);
@@ -337,6 +340,11 @@ export function initParticleGate(container: HTMLElement): ParticleGateControls {
     uniforms.uMouse.value.x += (mouse.x - uniforms.uMouse.value.x) * 0.05;
     uniforms.uMouse.value.y += (mouse.y - uniforms.uMouse.value.y) * 0.05;
 
+    // Stop rendering when fully transparent (avoid GPU waste)
+    if (uniforms.uGlobalAlpha.value < 0.01 && globalAlphaTarget === 0.0) {
+      return;
+    }
+
     renderer.render(scene, camera);
   }
 
@@ -353,6 +361,7 @@ export function initParticleGate(container: HTMLElement): ParticleGateControls {
 
     geometry.dispose();
     material.dispose();
+    renderer.forceContextLoss();
     renderer.dispose();
 
     // Remove canvas from DOM
@@ -373,7 +382,7 @@ export function initParticleGate(container: HTMLElement): ParticleGateControls {
     scatterTarget = 1.0;
     globalAlphaTarget = 0.0;
     return new Promise((resolve) => {
-      setTimeout(resolve, 600);
+      setTimeout(resolve, 900);
     });
   }
 
