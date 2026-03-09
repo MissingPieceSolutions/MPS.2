@@ -10,6 +10,8 @@
  * Exports `initParticleGate(container)` which returns:
  *   - destroy()       — full cleanup (renderer, geometry, material, listeners, canvas)
  *   - setProgress(p)  — manually override convergence (0 = scattered, 1 = formed)
+ *   - fadeOut()        — lower particle global alpha (dissolve behind logo)
+ *   - scatter()        — scatter particles outward, returns a Promise resolved after ~500ms
  */
 
 import * as THREE from 'three';
@@ -53,8 +55,10 @@ const vertexShader = /* glsl */ `
   // Uniforms
   uniform float uTime;          // elapsed time in seconds
   uniform float uProgress;      // convergence progress 0→1
+  uniform float uScatter;       // scatter-out progress 0→1
   uniform vec2  uMouse;         // normalised mouse position (-1 to 1)
   uniform float uPixelRatio;    // devicePixelRatio (capped at 2)
+  uniform float uGlobalAlpha;   // global alpha multiplier (1 = full, 0 = invisible)
 
   // Varyings → fragment shader
   varying vec3  vColor;
@@ -64,10 +68,6 @@ const vertexShader = /* glsl */ `
   // Helpers
   // -----------------------------------------------------------------------
 
-  /**
-   * Attempt a smooth-start ease that mirrors a power curve.
-   * p is clamped per-particle based on its stagger delay.
-   */
   float easeOutCubic(float t) {
     float inv = 1.0 - t;
     return 1.0 - inv * inv * inv;
@@ -75,15 +75,20 @@ const vertexShader = /* glsl */ `
 
   void main() {
     // --- Per-particle staggered progress ---
-    // Each particle's delay stretches the window it starts moving in.
-    // A particle with aDelay=0.3 won't start until uProgress reaches 0.3,
-    // then ramps 0→1 over the remaining 70 % of the timeline.
-    float pStart = aDelay * 0.5;                     // delay window (0–0.5)
+    float pStart = aDelay * 0.5;
     float raw    = clamp((uProgress - pStart) / (1.0 - pStart), 0.0, 1.0);
     float p      = easeOutCubic(raw);
 
     // --- Position: lerp from scattered → target with ambient drift ---
     vec3 pos = mix(aRandom, aTarget, p);
+
+    // --- Scatter outward when uScatter > 0 ---
+    if (uScatter > 0.0) {
+      // Push particles away from center, beyond their original scattered positions
+      vec3 dir = length(aTarget) > 0.001 ? normalize(aTarget) : normalize(aRandom);
+      float scatterDist = 8.0 * uScatter * (0.5 + aDelay * 0.5);
+      pos += dir * scatterDist;
+    }
 
     // Ambient drift — small oscillation after convergence
     float drift = sin(uTime * 1.2 + aDelay * 6.2831) * 0.04 * p;
@@ -103,7 +108,8 @@ const vertexShader = /* glsl */ `
     vColor = mix(aInitColor, brandPurple, p);
 
     // Alpha: scattered particles are softer, formed ones glow brighter
-    vAlpha = mix(0.6, 1.0, p);
+    // Multiply by uGlobalAlpha for fade-out and by inverse scatter for dissolve
+    vAlpha = mix(0.6, 1.0, p) * uGlobalAlpha * (1.0 - uScatter * 0.8);
 
     // --- GL position & point size ---
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
@@ -190,6 +196,10 @@ export interface ParticleGateControls {
   destroy: () => void;
   /** Manually override convergence (0 = scattered, 1 = ring formed) */
   setProgress: (p: number) => void;
+  /** Lower particle opacity to let the real logo show through */
+  fadeOut: () => void;
+  /** Scatter particles outward — returns a Promise that resolves after animation (~500ms) */
+  scatter: () => Promise<void>;
 }
 
 export function initParticleGate(container: HTMLElement): ParticleGateControls {
@@ -250,10 +260,12 @@ export function initParticleGate(container: HTMLElement): ParticleGateControls {
 
   // --- Shader material ----------------------------------------------------
   const uniforms = {
-    uTime:       { value: 0 },
-    uProgress:   { value: 0 },
-    uMouse:      { value: new THREE.Vector2(0, 0) },
-    uPixelRatio: { value: Math.min(window.devicePixelRatio, 2) },
+    uTime:        { value: 0 },
+    uProgress:    { value: 0 },
+    uScatter:     { value: 0 },
+    uMouse:       { value: new THREE.Vector2(0, 0) },
+    uPixelRatio:  { value: Math.min(window.devicePixelRatio, 2) },
+    uGlobalAlpha: { value: 1.0 },
   };
 
   const material = new THREE.ShaderMaterial({
@@ -273,6 +285,10 @@ export function initParticleGate(container: HTMLElement): ParticleGateControls {
   let animationFrameId = 0;
   let manualProgress: number | null = null; // when non-null, overrides auto
   const clock = new THREE.Clock();
+
+  // Tween targets for scatter and globalAlpha
+  let scatterTarget = 0;
+  let globalAlphaTarget = 1.0;
 
   // --- Mouse tracking -----------------------------------------------------
   const mouse = { x: 0, y: 0 };
@@ -313,6 +329,10 @@ export function initParticleGate(container: HTMLElement): ParticleGateControls {
       uniforms.uProgress.value = Math.min(elapsed / CONVERGE_DURATION, 1.0);
     }
 
+    // Smooth lerp scatter and globalAlpha towards their targets
+    uniforms.uScatter.value += (scatterTarget - uniforms.uScatter.value) * 0.08;
+    uniforms.uGlobalAlpha.value += (globalAlphaTarget - uniforms.uGlobalAlpha.value) * 0.06;
+
     // Smooth mouse lerp for fluid parallax
     uniforms.uMouse.value.x += (mouse.x - uniforms.uMouse.value.x) * 0.05;
     uniforms.uMouse.value.y += (mouse.y - uniforms.uMouse.value.y) * 0.05;
@@ -345,5 +365,17 @@ export function initParticleGate(container: HTMLElement): ParticleGateControls {
     manualProgress = Math.max(0, Math.min(1, p));
   }
 
-  return { destroy, setProgress };
+  function fadeOut(): void {
+    globalAlphaTarget = 0.3;
+  }
+
+  function scatter(): Promise<void> {
+    scatterTarget = 1.0;
+    globalAlphaTarget = 0.0;
+    return new Promise((resolve) => {
+      setTimeout(resolve, 600);
+    });
+  }
+
+  return { destroy, setProgress, fadeOut, scatter };
 }

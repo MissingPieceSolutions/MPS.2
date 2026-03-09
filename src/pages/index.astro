@@ -21,87 +21,56 @@ const schema = {
   ]
 };
 
-const portalCards = [
-  {
-    title: 'Services',
-    description: 'AI strategy, custom builds, and automation that move the needle.',
-    href: '/services',
-  },
-  {
-    title: 'Portfolio',
-    description: 'Real projects, real results — see what we ship.',
-    href: '/portfolio',
-  },
-  {
-    title: 'About',
-    description: 'The team and thinking behind every missing piece.',
-    href: '/about',
-  },
-  {
-    title: 'Contact',
-    description: 'Ready to talk? Let\u2019s figure out your next move.',
-    href: '/contact',
-  },
+const navLinks = [
+  { label: 'Services', href: '/services' },
+  { label: 'Portfolio', href: '/portfolio' },
+  { label: 'About', href: '/about' },
+  { label: 'Contact', href: '/contact' },
 ];
 ---
 
 <BaseLayout title={`${SITE.name} — AI Agency`} description={SITE.description} ogImage="/og/home.png">
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(schema)} />
 
-  <!-- 1. Particle Gate -->
+  <!-- Full-screen gate — single viewport experience, no scrolling -->
   <section id="gate" class="relative h-screen w-full overflow-hidden bg-bg-base">
     <div id="particle-canvas" class="absolute inset-0"></div>
 
-    <!-- Overlay text — starts invisible, JS adds .is-visible after convergence -->
+    <!-- Real logo — crossfades in after particle convergence -->
+    <img
+      id="gate-logo"
+      src="/logo/mps-icon-full.png"
+      alt="Missing Piece Solutions logo"
+      class="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 md:w-64 md:h-64 lg:w-72 lg:h-72 object-contain opacity-0 transition-opacity duration-1000"
+    />
+
+    <!-- Overlay: brand name + floating navigation labels -->
     <div
       id="gate-overlay"
-      class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-6 opacity-0 transition-opacity duration-1000"
+      class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center opacity-0 transition-opacity duration-1000"
     >
-      <h1 class="text-4xl md:text-6xl lg:text-7xl font-bold text-text-primary text-center tracking-tight">
-        Missing Piece Solutions
-      </h1>
-      <a
-        href="#portal"
-        class="pointer-events-auto animate-bounce text-text-muted hover:text-accent transition-colors"
-        aria-label="Scroll down"
-      >
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </a>
-    </div>
-  </section>
+      <!-- Push content below the logo center -->
+      <div class="mt-40 md:mt-52 lg:mt-56 flex flex-col items-center gap-6">
+        <h1 class="text-2xl md:text-3xl lg:text-4xl font-bold text-text-primary text-center tracking-tight">
+          Missing Piece Solutions
+        </h1>
 
-  <!-- 2. Navigation Portal -->
-  <section id="portal" class="bg-bg-base py-32 px-6">
-    <div class="max-w-4xl mx-auto space-y-16 text-center">
-      <div class="space-y-6">
-        <h2 class="text-4xl lg:text-6xl font-bold text-text-primary" data-reveal="fade-up">
-          Build AI That Delivers
-        </h2>
-        <p
-          class="text-lg lg:text-xl text-text-muted max-w-2xl mx-auto leading-relaxed"
-          data-reveal="fade-up"
-          style="--reveal-delay: 120ms"
+        <!-- Floating navigation row -->
+        <nav
+          id="gate-nav"
+          class="flex flex-wrap items-center justify-center gap-4 md:gap-8 opacity-0 transition-opacity duration-700"
         >
-          We design, build, and deploy AI systems that cut operational drag and unlock capacity your team didn't know it had.
-        </p>
-      </div>
-
-      <div class="grid sm:grid-cols-2 gap-6">
-        {portalCards.map((card, i) => (
-          <a
-            href={card.href}
-            class="group rounded-2xl bg-surface/60 backdrop-blur-md ring-1 ring-white/10 p-8 text-left transition-all duration-300 hover:-translate-y-1 hover:ring-accent/40 hover:shadow-[0_0_24px_rgba(139,92,246,0.15)]"
-            data-reveal="fade-up"
-            style={`--reveal-delay: ${200 + i * 100}ms`}
-          >
-            <h3 class="text-xl font-semibold text-text-primary mb-2 group-hover:text-accent transition-colors">
-              {card.title}
-            </h3>
-            <p class="text-sm text-text-muted leading-relaxed">{card.description}</p>
-          </a>
-        ))}
+          {navLinks.map((link, i) => (
+            <a
+              href={link.href}
+              class="portal-link pointer-events-auto font-mono text-xs md:text-sm uppercase tracking-widest text-text-muted hover:text-accent transition-colors duration-300"
+              style={`--stagger: ${i}`}
+              data-href={link.href}
+            >
+              {link.label}
+            </a>
+          ))}
+        </nav>
       </div>
     </div>
   </section>
@@ -110,33 +79,72 @@ const portalCards = [
     import { initParticleGate } from '../scripts/particle-gate';
 
     let gate: ReturnType<typeof initParticleGate> | null = null;
+    let logoTimer: ReturnType<typeof setTimeout> | null = null;
     let overlayTimer: ReturnType<typeof setTimeout> | null = null;
+    let navTimer: ReturnType<typeof setTimeout> | null = null;
 
     function setup() {
       const container = document.getElementById('particle-canvas');
+      const logo = document.getElementById('gate-logo') as HTMLImageElement | null;
       const overlay = document.getElementById('gate-overlay');
-      if (!container || !overlay) return;
+      const nav = document.getElementById('gate-nav');
+      if (!container || !logo || !overlay || !nav) return;
 
       const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       if (prefersReduced) {
-        // Skip animation — show text immediately, no Three.js
+        // Skip animation — show everything immediately
+        logo.classList.remove('opacity-0');
         overlay.classList.remove('opacity-0');
+        nav.classList.remove('opacity-0');
         return;
       }
 
       gate = initParticleGate(container);
 
+      // After convergence (~3.2s): fade in logo, fade particles down
+      logoTimer = setTimeout(() => {
+        logo.classList.remove('opacity-0');
+        gate?.fadeOut();
+      }, 3200);
+
+      // Show brand name slightly after logo
       overlayTimer = setTimeout(() => {
         overlay.classList.remove('opacity-0');
-      }, 3200);
+      }, 3600);
+
+      // Show nav links with stagger
+      navTimer = setTimeout(() => {
+        nav.classList.remove('opacity-0');
+      }, 4000);
+
+      // Scatter on portal link click
+      document.querySelectorAll('.portal-link').forEach((link) => {
+        link.addEventListener('click', handlePortalClick as EventListener);
+      });
+    }
+
+    async function handlePortalClick(e: MouseEvent) {
+      e.preventDefault();
+      const target = (e.currentTarget as HTMLAnchorElement).getAttribute('data-href');
+      if (!target) return;
+
+      if (gate) {
+        await gate.scatter();
+      }
+
+      window.location.href = target;
     }
 
     function cleanup() {
-      if (overlayTimer) {
-        clearTimeout(overlayTimer);
-        overlayTimer = null;
-      }
+      if (logoTimer) { clearTimeout(logoTimer); logoTimer = null; }
+      if (overlayTimer) { clearTimeout(overlayTimer); overlayTimer = null; }
+      if (navTimer) { clearTimeout(navTimer); navTimer = null; }
+
+      document.querySelectorAll('.portal-link').forEach((link) => {
+        link.removeEventListener('click', handlePortalClick as EventListener);
+      });
+
       if (gate) {
         gate.destroy();
         gate = null;
