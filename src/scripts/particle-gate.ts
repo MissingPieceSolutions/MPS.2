@@ -1,17 +1,19 @@
 /**
- * Particle Gate — Three.js Energy Ring Entrance
+ * Particle Gate — Image-Sampled Three.js Entrance
  *
- * The hero visual for the MPS homepage. ~4000 particles begin scattered
- * across a black void in blues, teals, and whites, then converge over
- * ~3 seconds into the MPS energy ring logo shape. During convergence
- * colours shift to brand purple (#8b5cf6). After forming, particles
- * gently drift and pulse. Mouse position adds subtle parallax.
+ * Faithful reproduction of slap-apps.de gate page:
+ *   - Center: MPS logo formed from image-sampled particles (high detail)
+ *   - Left / Right: Glowing portal arches that slowly rotate
+ *   - Background: Star field
+ *   - Mouse parallax on entire scene
+ *   - Convergence animation: scattered → formed (~3s)
+ *   - scatter() for exit transition
  *
- * Exports `initParticleGate(container)` which returns:
- *   - destroy()       — full cleanup (renderer, geometry, material, listeners, canvas)
- *   - setProgress(p)  — manually override convergence (0 = scattered, 1 = formed)
- *   - fadeOut()        — lower particle global alpha (dissolve behind logo)
- *   - scatter()        — scatter particles outward, returns a Promise resolved after ~900ms
+ * The logo shape is created by sampling bright pixels from the MPS logo PNG,
+ * producing thousands of particles that trace the exact energy ring shape
+ * including all wisps and trails — far more detailed than a procedural ring.
+ *
+ * Exports `initParticleGate(container)` returning a Promise of controls.
  */
 
 import * as THREE from 'three';
@@ -20,26 +22,180 @@ import * as THREE from 'three';
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Total particle count — balances visual density with performance */
-const PARTICLE_COUNT = 4000;
+const LOGO_COUNT = 7000;
+const GATE_COUNT = 600;   // per gate
+const STAR_COUNT = 1800;
+const TOTAL = LOGO_COUNT + GATE_COUNT * 2 + STAR_COUNT;
 
-/** Radius of the energy ring (world units) */
-const RING_RADIUS = 2.5;
-
-/** Thickness of the ring band — particles distribute within ±RING_THICKNESS of RING_RADIUS */
-const RING_THICKNESS = 0.4;
-
-/** Convergence duration in seconds */
 const CONVERGE_DURATION = 3.0;
+const SCATTER_RANGE = 8.0;
+const BASE_POINT_SIZE = 3.0;
 
-/** Max scatter distance from origin for the initial random positions */
-const SCATTER_RANGE = 6.0;
+// Gate positions (world X coordinate for each gate center)
+const GATE_L_X = -4.5;
+const GATE_R_X = 4.5;
 
-/** Base point size in the vertex shader */
-const BASE_POINT_SIZE = 4.0;
+// ---------------------------------------------------------------------------
+// Image Sampling — extract particle positions + colours from logo PNG
+// ---------------------------------------------------------------------------
 
-/** Brand purple as a normalised RGB vec3 string for GLSL */
-const BRAND_PURPLE = 'vec3(0.545, 0.361, 0.965)'; // #8b5cf6
+interface SampledData {
+  positions: Float32Array; // [x,y,z] × count
+  colors: Float32Array;    // [r,g,b] × count
+}
+
+async function sampleLogoImage(src: string, count: number): Promise<SampledData> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const sampleSize = 200;
+      canvas.width = sampleSize;
+      canvas.height = sampleSize;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0, sampleSize, sampleSize);
+      const imageData = ctx.getImageData(0, 0, sampleSize, sampleSize);
+      const data = imageData.data;
+
+      // Collect all bright pixels with their normalized positions and colours
+      const pixels: { x: number; y: number; r: number; g: number; b: number; brightness: number }[] = [];
+      for (let py = 0; py < sampleSize; py++) {
+        for (let px = 0; px < sampleSize; px++) {
+          const i = (py * sampleSize + px) * 4;
+          const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+          const brightness = (r + g + b) / 3;
+          if (brightness > 20 && a > 60) {
+            pixels.push({
+              x: (px / sampleSize - 0.5),
+              y: -(py / sampleSize - 0.5), // flip Y
+              r: r / 255,
+              g: g / 255,
+              b: b / 255,
+              brightness,
+            });
+          }
+        }
+      }
+
+      if (pixels.length === 0) {
+        reject(new Error('No bright pixels found in logo image'));
+        return;
+      }
+
+      // Weight sampling toward brighter pixels for denser core
+      const weights = pixels.map(p => p.brightness);
+      const totalWeight = weights.reduce((a, b) => a + b, 0);
+      const cumulative = new Float64Array(pixels.length);
+      cumulative[0] = weights[0] / totalWeight;
+      for (let i = 1; i < pixels.length; i++) {
+        cumulative[i] = cumulative[i - 1] + weights[i] / totalWeight;
+      }
+
+      function weightedSample(): number {
+        const r = Math.random();
+        let lo = 0, hi = cumulative.length - 1;
+        while (lo < hi) {
+          const mid = (lo + hi) >> 1;
+          if (cumulative[mid] < r) lo = mid + 1;
+          else hi = mid;
+        }
+        return lo;
+      }
+
+      const positions = new Float32Array(count * 3);
+      const colors = new Float32Array(count * 3);
+      const scale = 5.5; // logo width in world units
+
+      for (let i = 0; i < count; i++) {
+        const idx = weightedSample();
+        const pixel = pixels[idx];
+
+        // Add sub-pixel jitter for smooth density
+        const jitter = 0.003;
+        positions[i * 3]     = pixel.x * scale + (Math.random() - 0.5) * jitter * scale;
+        positions[i * 3 + 1] = pixel.y * scale + (Math.random() - 0.5) * jitter * scale;
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 0.4;
+
+        colors[i * 3]     = pixel.r;
+        colors[i * 3 + 1] = pixel.g;
+        colors[i * 3 + 2] = pixel.b;
+      }
+
+      resolve({ positions, colors });
+    };
+    img.onerror = () => reject(new Error(`Failed to load logo image: ${src}`));
+    img.src = src;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Procedural Gate Portal — vertical elliptical arch
+// ---------------------------------------------------------------------------
+
+function generateGatePortal(
+  centerX: number,
+  count: number,
+  color: [number, number, number],
+): SampledData {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  const height = 3.5;
+  const width = 1.2;
+  const tubeThickness = 0.15;
+
+  for (let i = 0; i < count; i++) {
+    // Distribute along the ellipse perimeter
+    const t = Math.random() * Math.PI * 2;
+    // Tube cross-section offset
+    const tubeAngle = Math.random() * Math.PI * 2;
+    const tubeR = Math.random() * tubeThickness;
+
+    const ex = Math.cos(t) * (width * 0.5);
+    const ey = Math.sin(t) * (height * 0.5);
+
+    // Add tube thickness
+    const nx = Math.cos(t); // normal direction
+    const ny = Math.sin(t);
+    const ox = nx * Math.cos(tubeAngle) * tubeR;
+    const oy = ny * Math.cos(tubeAngle) * tubeR;
+    const oz = Math.sin(tubeAngle) * tubeR;
+
+    positions[i * 3]     = centerX + ex + ox;
+    positions[i * 3 + 1] = ey + oy;
+    positions[i * 3 + 2] = oz;
+
+    // Color with slight variation
+    colors[i * 3]     = Math.min(1, Math.max(0, color[0] + (Math.random() - 0.5) * 0.15));
+    colors[i * 3 + 1] = Math.min(1, Math.max(0, color[1] + (Math.random() - 0.5) * 0.15));
+    colors[i * 3 + 2] = Math.min(1, Math.max(0, color[2] + (Math.random() - 0.5) * 0.15));
+  }
+
+  return { positions, colors };
+}
+
+// ---------------------------------------------------------------------------
+// Star field background
+// ---------------------------------------------------------------------------
+
+function generateStarfield(count: number): SampledData {
+  const positions = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+
+  for (let i = 0; i < count; i++) {
+    positions[i * 3]     = (Math.random() - 0.5) * 20;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * 12;
+    positions[i * 3 + 2] = (Math.random() - 0.5) * 10 - 3; // pushed back
+
+    // Blue-white tint
+    const w = 0.7 + Math.random() * 0.3;
+    colors[i * 3]     = w * 0.8;
+    colors[i * 3 + 1] = w * 0.9;
+    colors[i * 3 + 2] = w;
+  }
+
+  return { positions, colors };
+}
 
 // ---------------------------------------------------------------------------
 // GLSL Shaders
@@ -47,26 +203,24 @@ const BRAND_PURPLE = 'vec3(0.545, 0.361, 0.965)'; // #8b5cf6
 
 const vertexShader = /* glsl */ `
   // Per-particle attributes
-  attribute vec3 aTarget;       // converged ring position
-  attribute vec3 aRandom;       // initial scattered position
-  attribute float aDelay;       // stagger delay (0–1) for convergence
-  attribute vec3 aInitColor;    // initial multi-colour (blues/teals/whites)
+  attribute vec3  aTarget;       // converged position
+  attribute vec3  aScattered;    // initial scattered position
+  attribute vec3  aTargetColor;  // final colour
+  attribute vec3  aInitColor;    // initial colour (blue-white)
+  attribute float aDelay;        // stagger delay 0–1
+  attribute float aType;         // 0=logo, 1=gateL, 2=gateR, 3=star
 
   // Uniforms
-  uniform float uTime;          // elapsed time in seconds
-  uniform float uProgress;      // convergence progress 0→1
-  uniform float uScatter;       // scatter-out progress 0→1
-  uniform vec2  uMouse;         // normalised mouse position (-1 to 1)
-  uniform float uPixelRatio;    // devicePixelRatio (capped at 2)
-  uniform float uGlobalAlpha;   // global alpha multiplier (1 = full, 0 = invisible)
+  uniform float uTime;
+  uniform float uProgress;       // convergence 0→1
+  uniform float uScatter;        // scatter-out 0→1
+  uniform vec2  uMouse;          // normalised mouse (-1 to 1)
+  uniform float uPixelRatio;
+  uniform float uGlobalAlpha;
 
-  // Varyings → fragment shader
+  // Varyings
   varying vec3  vColor;
   varying float vAlpha;
-
-  // -----------------------------------------------------------------------
-  // Helpers
-  // -----------------------------------------------------------------------
 
   float easeOutCubic(float t) {
     float inv = 1.0 - t;
@@ -79,47 +233,77 @@ const vertexShader = /* glsl */ `
     float raw    = clamp((uProgress - pStart) / (1.0 - pStart), 0.0, 1.0);
     float p      = easeOutCubic(raw);
 
-    // --- Position: lerp from scattered → target with ambient drift ---
-    vec3 pos = mix(aRandom, aTarget, p);
+    // --- Target position (with gate rotation) ---
+    vec3 target = aTarget;
+
+    // Gates rotate slowly around their Y axis
+    if (aType > 0.5 && aType < 2.5) {
+      float cx = aType < 1.5 ? ${GATE_L_X.toFixed(1)} : ${GATE_R_X.toFixed(1)};
+      float rotSpeed = aType < 1.5 ? 0.3 : -0.3; // opposite directions
+      float angle = uTime * rotSpeed;
+      float localX = target.x - cx;
+      float localZ = target.z;
+      target.x = cx + localX * cos(angle) - localZ * sin(angle);
+      target.z = localX * sin(angle) + localZ * cos(angle);
+    }
+
+    // --- Position: lerp from scattered → target ---
+    vec3 pos = mix(aScattered, target, p);
+
+    // Stars converge quickly (they're already near their final position)
+    if (aType > 2.5) {
+      pos = mix(aScattered, aTarget, min(p * 2.0, 1.0));
+    }
 
     // --- Scatter outward when uScatter > 0 ---
     if (uScatter > 0.0) {
-      // Push particles away from center, beyond their original scattered positions
-      vec3 dir = length(aTarget) > 0.001 ? normalize(aTarget) : normalize(aRandom);
-      float scatterDist = 8.0 * uScatter * (0.5 + aDelay * 0.5);
+      vec3 dir = length(target) > 0.001 ? normalize(target) : normalize(aScattered);
+      float scatterDist = 10.0 * uScatter * (0.5 + aDelay * 0.5);
       pos += dir * scatterDist;
     }
 
-    // Safe normalized target direction (avoid undefined normalize(vec3(0)))
-    vec3 tNorm = length(aTarget) > 0.001 ? normalize(aTarget) : vec3(0.0, 1.0, 0.0);
+    // Ambient drift
+    float drift = sin(uTime * 0.8 + aDelay * 6.2831) * 0.03 * p;
+    vec3 driftDir = length(target) > 0.001 ? normalize(target) : vec3(0.0, 1.0, 0.0);
+    pos += driftDir * drift;
 
-    // Ambient drift — small oscillation after convergence
-    float drift = sin(uTime * 1.2 + aDelay * 6.2831) * 0.04 * p;
-    pos += tNorm * drift;
+    // Logo pulse (type 0 only)
+    if (aType < 0.5) {
+      float pulse = sin(uTime * 0.6 + length(target.xy) * 2.0) * 0.02 * p;
+      pos += driftDir * pulse;
+    }
 
-    // Gentle radial pulse on the formed ring
-    float pulse = sin(uTime * 0.8) * 0.02 * p;
-    pos += tNorm * pulse;
+    // Gate glow pulse
+    if (aType > 0.5 && aType < 2.5) {
+      float gatePulse = sin(uTime * 1.5 + aDelay * 6.28) * 0.06 * p;
+      pos.y += gatePulse;
+    }
 
-    // --- Mouse parallax (stronger on scattered particles) ---
-    float parallaxStrength = mix(0.35, 0.06, p);
+    // --- Mouse parallax ---
+    float parallaxStrength = mix(0.3, 0.05, p);
+    // Stars get more parallax (depth effect)
+    if (aType > 2.5) parallaxStrength = 0.15;
     pos.x += uMouse.x * parallaxStrength;
     pos.y += uMouse.y * parallaxStrength;
 
-    // --- Colour: multi-colour → brand purple ---
-    vec3 brandPurple = ${BRAND_PURPLE};
-    vColor = mix(aInitColor, brandPurple, p);
+    // --- Colour ---
+    vColor = mix(aInitColor, aTargetColor, p);
 
-    // Alpha: scattered particles are softer, formed ones glow brighter
-    // Multiply by uGlobalAlpha for fade-out and by inverse scatter for dissolve
-    vAlpha = mix(0.6, 1.0, p) * uGlobalAlpha * (1.0 - uScatter * 0.8);
+    // Alpha: logo particles brighter, stars dimmer
+    float baseAlpha = aType < 0.5 ? mix(0.5, 1.0, p) :    // logo
+                      aType < 2.5 ? mix(0.4, 0.9, p) :     // gates
+                                    mix(0.2, 0.5, p);       // stars
+    vAlpha = baseAlpha * uGlobalAlpha * (1.0 - uScatter * 0.8);
 
-    // --- GL position & point size ---
+    // --- GL output ---
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-    gl_Position  = projectionMatrix * mvPosition;
+    gl_Position = projectionMatrix * mvPosition;
 
-    // Perspective-attenuated point size
-    float size = ${BASE_POINT_SIZE.toFixed(1)} * uPixelRatio;
+    // Point size — logo particles slightly larger, stars smaller
+    float sizeMult = aType < 0.5 ? 1.0 :
+                     aType < 2.5 ? 1.3 :
+                                   0.6;
+    float size = ${BASE_POINT_SIZE.toFixed(1)} * sizeMult * uPixelRatio;
     gl_PointSize = size * (300.0 / -mvPosition.z);
   }
 `;
@@ -129,139 +313,132 @@ const fragmentShader = /* glsl */ `
   varying float vAlpha;
 
   void main() {
-    // Soft glowing disc — no texture required
     float d = length(gl_PointCoord - 0.5);
     if (d > 0.5) discard;
     float alpha = 1.0 - smoothstep(0.0, 0.5, d);
 
-    gl_FragColor = vec4(vColor, alpha * vAlpha);
+    // Slight glow intensification near center (like slap-apps)
+    vec3 glow = vColor * (1.0 + (0.5 - d) * 0.3);
+
+    gl_FragColor = vec4(glow, alpha * vAlpha);
   }
 `;
 
 // ---------------------------------------------------------------------------
-// Geometry helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Generate a random point on / near the energy ring.
- * ~80 % of particles sit tightly on the ring; ~20 % are scattered nearby
- * to create an "energy field" halo.
- */
-function ringTarget(i: number, count: number): [number, number, number] {
-  const angle = (i / count) * Math.PI * 2 + Math.random() * 0.05;
-
-  // Decide if this particle is a tight-ring or halo particle
-  const isHalo = Math.random() < 0.2;
-  const radiusOffset = isHalo
-    ? (Math.random() - 0.5) * RING_THICKNESS * 3 // wider scatter for halo
-    : (Math.random() - 0.5) * RING_THICKNESS;     // tight band
-
-  const r = RING_RADIUS + radiusOffset;
-
-  // Slight z-scatter for depth
-  const z = (Math.random() - 0.5) * (isHalo ? 0.6 : 0.15);
-
-  return [Math.cos(angle) * r, Math.sin(angle) * r, z];
-}
-
-/**
- * Random scattered position in the initial void.
- */
-function scatteredPosition(): [number, number, number] {
-  return [
-    (Math.random() - 0.5) * SCATTER_RANGE * 2,
-    (Math.random() - 0.5) * SCATTER_RANGE * 2,
-    (Math.random() - 0.5) * SCATTER_RANGE,
-  ];
-}
-
-/**
- * Pick a random initial colour from the blue / teal / white palette.
- */
-function initialColor(): [number, number, number] {
-  const palette: [number, number, number][] = [
-    [0.3, 0.6, 1.0],   // soft blue
-    [0.2, 0.8, 0.9],   // teal
-    [0.4, 0.5, 1.0],   // periwinkle
-    [0.85, 0.9, 1.0],  // near-white blue
-    [0.1, 0.9, 0.8],   // cyan-teal
-    [0.95, 0.95, 1.0],  // white
-  ];
-  return palette[Math.floor(Math.random() * palette.length)];
-}
-
-// ---------------------------------------------------------------------------
-// Main initialiser
+// Public interface
 // ---------------------------------------------------------------------------
 
 export interface ParticleGateControls {
-  /** Full cleanup — remove canvas, dispose GPU resources, unbind listeners */
   destroy: () => void;
-  /** Manually override convergence (0 = scattered, 1 = ring formed) */
-  setProgress: (p: number) => void;
-  /** Lower particle opacity to let the real logo show through */
   fadeOut: () => void;
-  /** Scatter particles outward — returns a Promise that resolves after animation (~500ms) */
   scatter: () => Promise<void>;
 }
 
-export function initParticleGate(container: HTMLElement): ParticleGateControls {
-  // --- Renderer -----------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Main initialiser (async — needs to load logo image)
+// ---------------------------------------------------------------------------
+
+export async function initParticleGate(container: HTMLElement): Promise<ParticleGateControls> {
+  // --- Sample logo image for particle positions ---
+  const logo = await sampleLogoImage('/logo/mps-icon-512.png', LOGO_COUNT);
+
+  // --- Generate gate portals ---
+  // Left gate: amber/gold (matching slap-apps left gate)
+  const gateL = generateGatePortal(GATE_L_X, GATE_COUNT, [0.95, 0.75, 0.25]);
+  // Right gate: fuchsia/pink (matching slap-apps right gate)
+  const gateR = generateGatePortal(GATE_R_X, GATE_COUNT, [0.85, 0.30, 0.90]);
+
+  // --- Background stars ---
+  const stars = generateStarfield(STAR_COUNT);
+
+  // --- Renderer ---
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
   container.appendChild(renderer.domElement);
 
-  // --- Scene & Camera -----------------------------------------------------
-  const scene  = new THREE.Scene();
+  // --- Scene & Camera ---
+  const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(
     50,
     container.clientWidth / container.clientHeight,
     0.1,
     100,
   );
-  camera.position.z = 7;
+  camera.position.z = 8;
 
-  // --- Build particle geometry --------------------------------------------
-  const positions  = new Float32Array(PARTICLE_COUNT * 3);
-  const targets    = new Float32Array(PARTICLE_COUNT * 3);
-  const randoms    = new Float32Array(PARTICLE_COUNT * 3);
-  const delays     = new Float32Array(PARTICLE_COUNT);
-  const initColors = new Float32Array(PARTICLE_COUNT * 3);
+  // --- Build combined geometry ---
+  const allTargets    = new Float32Array(TOTAL * 3);
+  const allScattered  = new Float32Array(TOTAL * 3);
+  const allTargetCol  = new Float32Array(TOTAL * 3);
+  const allInitCol    = new Float32Array(TOTAL * 3);
+  const allDelays     = new Float32Array(TOTAL);
+  const allTypes      = new Float32Array(TOTAL);
+  const dummyPos      = new Float32Array(TOTAL * 3);
 
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
-    const [tx, ty, tz] = ringTarget(i, PARTICLE_COUNT);
-    targets[i * 3]     = tx;
-    targets[i * 3 + 1] = ty;
-    targets[i * 3 + 2] = tz;
+  let offset = 0;
 
-    const [rx, ry, rz] = scatteredPosition();
-    randoms[i * 3]     = rx;
-    randoms[i * 3 + 1] = ry;
-    randoms[i * 3 + 2] = rz;
+  // Helper to write a segment
+  function writeSegment(
+    data: SampledData,
+    type: number,
+    start: number,
+    count: number,
+  ) {
+    for (let i = 0; i < count; i++) {
+      const idx = start + i;
+      const i3 = idx * 3;
+      const s3 = i * 3;
 
-    // Initial draw position = scattered
-    positions[i * 3]     = rx;
-    positions[i * 3 + 1] = ry;
-    positions[i * 3 + 2] = rz;
+      // Target position
+      allTargets[i3]     = data.positions[s3];
+      allTargets[i3 + 1] = data.positions[s3 + 1];
+      allTargets[i3 + 2] = data.positions[s3 + 2];
 
-    // Per-particle stagger delay (0–1)
-    delays[i] = Math.random();
+      // Target colour
+      allTargetCol[i3]     = data.colors[s3];
+      allTargetCol[i3 + 1] = data.colors[s3 + 1];
+      allTargetCol[i3 + 2] = data.colors[s3 + 2];
 
-    const [cr, cg, cb] = initialColor();
-    initColors[i * 3]     = cr;
-    initColors[i * 3 + 1] = cg;
-    initColors[i * 3 + 2] = cb;
+      // Scattered position
+      if (type === 3) {
+        // Stars: scatter near their final position
+        allScattered[i3]     = data.positions[s3] + (Math.random() - 0.5) * 3;
+        allScattered[i3 + 1] = data.positions[s3 + 1] + (Math.random() - 0.5) * 3;
+        allScattered[i3 + 2] = data.positions[s3 + 2] + (Math.random() - 0.5) * 2;
+      } else {
+        allScattered[i3]     = (Math.random() - 0.5) * SCATTER_RANGE * 2;
+        allScattered[i3 + 1] = (Math.random() - 0.5) * SCATTER_RANGE * 2;
+        allScattered[i3 + 2] = (Math.random() - 0.5) * SCATTER_RANGE;
+      }
+
+      // Initial colour: blue-white for all
+      const w = 0.6 + Math.random() * 0.4;
+      allInitCol[i3]     = w * 0.4;
+      allInitCol[i3 + 1] = w * 0.6;
+      allInitCol[i3 + 2] = w;
+
+      // Delay and type
+      allDelays[idx] = Math.random();
+      allTypes[idx] = type;
+    }
   }
 
-  const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute('position',   new THREE.BufferAttribute(positions, 3));
-  geometry.setAttribute('aTarget',    new THREE.BufferAttribute(targets, 3));
-  geometry.setAttribute('aRandom',    new THREE.BufferAttribute(randoms, 3));
-  geometry.setAttribute('aDelay',     new THREE.BufferAttribute(delays, 1));
-  geometry.setAttribute('aInitColor', new THREE.BufferAttribute(initColors, 3));
+  writeSegment(logo,  0, offset, LOGO_COUNT); offset += LOGO_COUNT;
+  writeSegment(gateL, 1, offset, GATE_COUNT); offset += GATE_COUNT;
+  writeSegment(gateR, 2, offset, GATE_COUNT); offset += GATE_COUNT;
+  writeSegment(stars, 3, offset, STAR_COUNT);
 
-  // --- Shader material ----------------------------------------------------
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position',    new THREE.BufferAttribute(dummyPos, 3));
+  geometry.setAttribute('aTarget',     new THREE.BufferAttribute(allTargets, 3));
+  geometry.setAttribute('aScattered',  new THREE.BufferAttribute(allScattered, 3));
+  geometry.setAttribute('aTargetColor',new THREE.BufferAttribute(allTargetCol, 3));
+  geometry.setAttribute('aInitColor',  new THREE.BufferAttribute(allInitCol, 3));
+  geometry.setAttribute('aDelay',      new THREE.BufferAttribute(allDelays, 1));
+  geometry.setAttribute('aType',       new THREE.BufferAttribute(allTypes, 1));
+
+  // --- Shader material ---
   const uniforms = {
     uTime:        { value: 0 },
     uProgress:    { value: 0 },
@@ -283,21 +460,18 @@ export function initParticleGate(container: HTMLElement): ParticleGateControls {
   const points = new THREE.Points(geometry, material);
   scene.add(points);
 
-  // --- State --------------------------------------------------------------
+  // --- State ---
   let destroyed = false;
   let animationFrameId = 0;
-  let manualProgress: number | null = null; // when non-null, overrides auto
   const clock = new THREE.Clock();
 
-  // Tween targets for scatter and globalAlpha
   let scatterTarget = 0;
   let globalAlphaTarget = 1.0;
 
-  // --- Mouse tracking -----------------------------------------------------
+  // --- Mouse tracking ---
   const mouse = { x: 0, y: 0 };
 
   function onMouseMove(e: MouseEvent): void {
-    // Normalise to -1…1 relative to container
     const rect = container.getBoundingClientRect();
     mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
@@ -305,7 +479,7 @@ export function initParticleGate(container: HTMLElement): ParticleGateControls {
 
   window.addEventListener('mousemove', onMouseMove, { passive: true });
 
-  // --- Resize handling ----------------------------------------------------
+  // --- Resize ---
   function onResize(): void {
     const w = container.clientWidth;
     const h = container.clientHeight;
@@ -317,7 +491,7 @@ export function initParticleGate(container: HTMLElement): ParticleGateControls {
 
   window.addEventListener('resize', onResize, { passive: true });
 
-  // --- Animation loop -----------------------------------------------------
+  // --- Animation loop ---
   function animate(): void {
     if (destroyed) return;
     animationFrameId = requestAnimationFrame(animate);
@@ -325,32 +499,28 @@ export function initParticleGate(container: HTMLElement): ParticleGateControls {
     const elapsed = clock.getElapsedTime();
     uniforms.uTime.value = elapsed;
 
-    // Auto-convergence: ramp 0→1 over CONVERGE_DURATION seconds
-    if (manualProgress !== null) {
-      uniforms.uProgress.value = manualProgress;
-    } else {
-      uniforms.uProgress.value = Math.min(elapsed / CONVERGE_DURATION, 1.0);
-    }
+    // Auto-convergence
+    uniforms.uProgress.value = Math.min(elapsed / CONVERGE_DURATION, 1.0);
 
-    // Smooth lerp scatter and globalAlpha towards their targets
+    // Smooth lerp scatter and globalAlpha
     uniforms.uScatter.value += (scatterTarget - uniforms.uScatter.value) * 0.08;
     uniforms.uGlobalAlpha.value += (globalAlphaTarget - uniforms.uGlobalAlpha.value) * 0.06;
 
-    // Smooth mouse lerp for fluid parallax
-    uniforms.uMouse.value.x += (mouse.x - uniforms.uMouse.value.x) * 0.05;
-    uniforms.uMouse.value.y += (mouse.y - uniforms.uMouse.value.y) * 0.05;
-
-    // Stop rendering when fully transparent (avoid GPU waste)
+    // Stop rendering when fully transparent
     if (uniforms.uGlobalAlpha.value < 0.01 && globalAlphaTarget === 0.0) {
       return;
     }
+
+    // Smooth mouse
+    uniforms.uMouse.value.x += (mouse.x - uniforms.uMouse.value.x) * 0.05;
+    uniforms.uMouse.value.y += (mouse.y - uniforms.uMouse.value.y) * 0.05;
 
     renderer.render(scene, camera);
   }
 
   animate();
 
-  // --- Public API ---------------------------------------------------------
+  // --- Public API ---
   function destroy(): void {
     if (destroyed) return;
     destroyed = true;
@@ -364,14 +534,9 @@ export function initParticleGate(container: HTMLElement): ParticleGateControls {
     renderer.forceContextLoss();
     renderer.dispose();
 
-    // Remove canvas from DOM
     if (renderer.domElement.parentNode) {
       renderer.domElement.parentNode.removeChild(renderer.domElement);
     }
-  }
-
-  function setProgress(p: number): void {
-    manualProgress = Math.max(0, Math.min(1, p));
   }
 
   function fadeOut(): void {
@@ -386,5 +551,5 @@ export function initParticleGate(container: HTMLElement): ParticleGateControls {
     });
   }
 
-  return { destroy, setProgress, fadeOut, scatter };
+  return { destroy, fadeOut, scatter };
 }
