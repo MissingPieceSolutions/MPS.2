@@ -1,0 +1,154 @@
+---
+interface Project {
+  slug: string;
+  title: string;
+  client_display: string;
+  industry: string;
+  services: string[];
+  outcome_headline: string;
+  year: string;
+  image?: string;
+}
+
+interface Props {
+  projects: Project[];
+}
+
+const { projects } = Astro.props;
+
+/* Map industry to a simple SVG icon path */
+const industryIcons: Record<string, string> = {
+  tourism: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z',
+  technology: 'M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-2 12H6V8h12v8z',
+  hospitality: 'M7 13c1.66 0 3-1.34 3-3S8.66 7 7 7s-3 1.34-3 3 1.34 3 3 3zm12-6h-8v7H3V5H1v15h2v-3h18v3h2V10a4 4 0 0 0-4-4z',
+  finance: 'M11.8 2L1 7v2h22V7L11.8 2zM3 11v6h4v-6H3zm6 0v6h4v-6H9zm6 0v6h4v-6h-4zM1 19v2h22v-2H1z',
+  education: 'M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z',
+  default: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+};
+
+function getIconPath(industry: string): string {
+  return industryIcons[industry.toLowerCase()] || industryIcons.default;
+}
+---
+
+<section class="w-full h-[calc(100vh-200px)] flex relative" data-reveal="fade">
+  <!-- Left side — Project List -->
+  <div class="portfolio-list-container w-full lg:w-1/2 h-full overflow-y-auto pr-4">
+    <div class="space-y-1 py-8">
+      {projects.map((project, index) => (
+        <a
+          href={`/portfolio/${project.slug}`}
+          class="portfolio-list-item group flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-300 hover:bg-surface/40"
+          data-index={index}
+        >
+          <!-- Category Icon -->
+          <div class="flex-shrink-0 w-10 h-10 rounded-full ring-1 ring-white/10 bg-surface-elevated/60 flex items-center justify-center transition-all duration-300 group-hover:ring-accent/30">
+            <svg class="w-5 h-5 text-text-muted" viewBox="0 0 24 24" fill="currentColor">
+              <path d={getIconPath(project.industry)} />
+            </svg>
+          </div>
+
+          <!-- Project Info -->
+          <div class="flex-1 min-w-0">
+            <h3 class="text-xl lg:text-2xl font-bold text-text-primary truncate">
+              {project.title}
+            </h3>
+            <p class="text-sm text-text-muted truncate">
+              {project.client_display}
+            </p>
+          </div>
+
+          <!-- Year -->
+          <span class="flex-shrink-0 font-mono text-text-muted transition-colors duration-300 group-hover:text-accent">
+            {project.year}
+          </span>
+        </a>
+      ))}
+    </div>
+  </div>
+
+  <!-- Right side — 3D Card Preview (desktop only) -->
+  <div class="hidden lg:flex w-1/2 h-full items-center justify-center" style="perspective: 800px;">
+    <div class="card-preview-stack relative w-80 h-96">
+      {projects.map((project, index) => (
+        <div
+          class="card-preview-item absolute inset-0 rounded-xl ring-1 ring-white/10 shadow-lg overflow-hidden transition-all duration-500 ease-out"
+          data-index={index}
+          style={`transform: rotateY(${index * 8}deg) translateZ(${-index * 30}px); opacity: ${index === 0 ? 1 : 0.5 - index * 0.08};`}
+        >
+          {/* Image or gradient fallback */}
+          {project.image ? (
+            <img
+              src={project.image}
+              alt={project.title}
+              class="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div class="absolute inset-0 bg-gradient-to-br from-accent/30 via-surface-elevated to-surface" />
+          )}
+
+          {/* Overlay info */}
+          <div class="absolute inset-0 bg-gradient-to-t from-bg-base/90 via-bg-base/40 to-transparent" />
+          <div class="absolute bottom-0 left-0 right-0 p-6 space-y-2">
+            <p class="text-xs font-mono text-accent uppercase tracking-wider">
+              {project.industry}
+            </p>
+            <h4 class="text-lg font-bold text-text-primary">
+              {project.title}
+            </h4>
+            <p class="text-sm text-text-muted line-clamp-2">
+              {project.outcome_headline}
+            </p>
+            <div class="flex flex-wrap gap-1 pt-1">
+              {project.services.slice(0, 3).map((service) => (
+                <span class="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent ring-1 ring-accent/20">
+                  {service}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .portfolio-list-container {
+    mask-image: linear-gradient(transparent, black 10%, black 90%, transparent);
+    -webkit-mask-image: linear-gradient(transparent, black 10%, black 90%, transparent);
+  }
+</style>
+
+<script>
+  function initPortfolioList() {
+    const listItems = document.querySelectorAll('.portfolio-list-item');
+    const cardItems = document.querySelectorAll('.card-preview-item');
+
+    if (!listItems.length || !cardItems.length) return;
+
+    listItems.forEach((item) => {
+      item.addEventListener('mouseenter', () => {
+        const activeIndex = Number(item.getAttribute('data-index'));
+
+        cardItems.forEach((card) => {
+          const cardIndex = Number(card.getAttribute('data-index'));
+          const el = card as HTMLElement;
+
+          if (cardIndex === activeIndex) {
+            el.style.transform = 'rotateY(0deg) translateZ(0px)';
+            el.style.opacity = '1';
+            el.style.zIndex = '10';
+          } else {
+            const offset = cardIndex - activeIndex;
+            el.style.transform = `rotateY(${offset * 8}deg) translateZ(${-Math.abs(offset) * 30}px)`;
+            el.style.opacity = `${Math.max(0.15, 0.5 - Math.abs(offset) * 0.08)}`;
+            el.style.zIndex = `${5 - Math.abs(offset)}`;
+          }
+        });
+      });
+    });
+  }
+
+  document.addEventListener('astro:page-load', initPortfolioList);
+</script>
