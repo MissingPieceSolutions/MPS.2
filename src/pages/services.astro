@@ -3,37 +3,39 @@ import { getEntry } from 'astro:content';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import SectionHeading from '../components/ui/SectionHeading.astro';
 import GlassCard from '../components/ui/GlassCard.astro';
+import Badge from '../components/ui/Badge.astro';
 import Button from '../components/ui/Button.astro';
 import CtaBanner from '../components/sections/CtaBanner.astro';
 import { SITE } from '../config';
 
 const entry = await getEntry('pages', 'services');
 if (!entry) throw new Error('Services page content not found');
-const { title, description, services, cta } = entry.data;
+const { title, description, packaged_products, custom, retainer, cta } = entry.data;
+
+const iconMap: Record<string, string> = {
+  phone: '\u{1F4DE}',
+  chat: '\u{1F4AC}',
+  refresh: '\u{1F504}',
+  star: '\u{2B50}',
+  calendar: '\u{1F4C5}',
+};
 
 const schema = {
   "@context": "https://schema.org",
   "@graph": [
-    {
+    ...packaged_products.items.map((p: any) => ({
       "@type": "Service",
-      "name": "AI Workflow Automation",
+      "name": p.name,
       "serviceType": "AI Automation",
       "provider": { "@type": "Organization", "name": SITE.name },
-      "description": "Automate repetitive business processes with intelligent AI workflows."
-    },
+      "description": p.description,
+    })),
     {
       "@type": "Service",
       "name": "Custom AI Development",
       "serviceType": "Software Development",
       "provider": { "@type": "Organization", "name": SITE.name },
-      "description": "Bespoke AI systems designed and built for your specific business needs."
-    },
-    {
-      "@type": "Service",
-      "name": "AI Strategy & Consulting",
-      "serviceType": "Consulting",
-      "provider": { "@type": "Organization", "name": SITE.name },
-      "description": "Strategic guidance on where and how AI can deliver value in your organization."
+      "description": custom.description,
     },
     {
       "@type": "BreadcrumbList",
@@ -61,39 +63,106 @@ const schema = {
     </div>
   </section>
 
-  <!-- Services Grid -->
+  <!-- Tier 1: Packaged Products -->
   <section class="bg-surface py-24 px-6">
-    <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-      {services.map((svc: any, i: number) => (
-        <div data-reveal="fade-up" style={`--reveal-delay: ${i * 120}ms`}>
-        <GlassCard hover>
-          <div class="flex flex-col h-full space-y-4">
-            <h3 class="text-xl font-semibold text-text-primary">{svc.name}</h3>
-            <p class="text-sm text-accent italic">{svc.tagline}</p>
-            <p class="text-sm text-text-muted">{svc.description}</p>
+    <div class="max-w-6xl mx-auto">
+      <SectionHeading
+        eyebrow={packaged_products.eyebrow}
+        heading={packaged_products.heading}
+        subheading={packaged_products.subheading}
+        align="center"
+      />
 
-            <ul class="space-y-1.5 pt-2">
-              {svc.deliverables.map((item: string) => (
-                <li class="text-xs text-text-muted flex items-start gap-2">
-                  <span class="text-accent mt-0.5">&#x2022;</span>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mt-16">
+        {packaged_products.items.map((product: any, i: number) => (
+          <div data-reveal="fade-up" style={`--reveal-delay: ${i * 120}ms`}>
+            <GlassCard hover>
+              <div class="flex flex-col h-full space-y-4">
+                <div class="flex items-center gap-3">
+                  <span class="text-2xl" aria-hidden="true">{iconMap[product.icon] || '\u{1F916}'}</span>
+                  <h3 class="text-xl font-semibold text-text-primary">{product.name}</h3>
+                </div>
+
+                <p class="text-sm text-accent italic">{product.tagline}</p>
+                <p class="text-sm text-text-muted">{product.description}</p>
+
+                <ul class="space-y-1.5 pt-2">
+                  {product.deliverables.map((item: string) => (
+                    <li class="text-xs text-text-muted flex items-start gap-2">
+                      <span class="text-accent mt-0.5">&#x2022;</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div class="pt-3 mt-auto border-t border-white/5">
+                  <Badge>{product.metric}</Badge>
+                </div>
+              </div>
+            </GlassCard>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Tier 2: Custom Development -->
+  <section class="bg-bg-base py-24 px-6">
+    <div class="max-w-4xl mx-auto" data-reveal="fade-up">
+      <GlassCard>
+        <div class="flex flex-col md:flex-row gap-8">
+          <div class="flex-1 space-y-4">
+            <span class="text-xs font-mono uppercase tracking-widest text-accent">{custom.eyebrow}</span>
+            <h3 class="text-2xl font-bold text-text-primary">{custom.heading}</h3>
+            <p class="text-sm text-accent italic">{custom.tagline}</p>
+            <p class="text-sm text-text-muted">{custom.description}</p>
+          </div>
+          <div class="flex-1 space-y-4">
+            <ul class="space-y-2">
+              {custom.services.map((svc: string) => (
+                <li class="text-sm text-text-muted flex items-start gap-2">
+                  <span class="text-accent mt-0.5">{'\u2192'}</span>
+                  <span>{svc}</span>
+                </li>
+              ))}
+            </ul>
+            <p class="text-sm font-semibold text-text-primary pt-2">{custom.pricing}</p>
+            <Button href="/contact" variant="ghost" size="sm">
+              Discuss a project
+            </Button>
+          </div>
+        </div>
+      </GlassCard>
+    </div>
+  </section>
+
+  <!-- Tier 3: Retainer -->
+  <section class="bg-surface py-24 px-6">
+    <div class="max-w-4xl mx-auto" data-reveal="fade-up">
+      <GlassCard>
+        <div class="flex flex-col md:flex-row gap-8">
+          <div class="flex-1 space-y-4">
+            <span class="text-xs font-mono uppercase tracking-widest text-accent">{retainer.eyebrow}</span>
+            <h3 class="text-2xl font-bold text-text-primary">{retainer.heading}</h3>
+            <p class="text-sm text-accent italic">{retainer.tagline}</p>
+            <p class="text-sm text-text-muted">{retainer.description}</p>
+          </div>
+          <div class="flex-1 space-y-4">
+            <ul class="space-y-2">
+              {retainer.includes.map((item: string) => (
+                <li class="text-sm text-text-muted flex items-start gap-2">
+                  <span class="text-accent mt-0.5">{'\u2192'}</span>
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
-
-            <div class="text-xs text-text-muted/70 italic border-l-2 border-accent/30 pl-3 mt-4">
-              {svc.micro_example}
-            </div>
-
-            <div class="pt-4 mt-auto">
-              <Button href="/contact" variant="ghost" size="sm">
-                Discuss this
-              </Button>
-            </div>
+            <p class="text-sm font-semibold text-text-primary pt-2">{retainer.pricing}</p>
+            <Button href="/contact" variant="ghost" size="sm">
+              Start a conversation
+            </Button>
           </div>
-        </GlassCard>
         </div>
-      ))}
+      </GlassCard>
     </div>
   </section>
 
