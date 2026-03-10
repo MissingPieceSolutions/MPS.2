@@ -11,12 +11,12 @@ hero:
 services_preview:
   heading: "What We Build"
   items:
-    - name: "AI Workflow Automation"
-      blurb: "We map your processes, find the friction, and wire up automated workflows using n8n that connect your tools end-to-end. The result: less manual work, fewer errors, and hours back every week."
+    - name: "AI-Powered Customer Agents"
+      blurb: "Voice AI, chat widgets, and booking systems that handle inbound inquiries 24/7 — qualifying leads and booking appointments while your team sleeps."
+    - name: "Lead Reactivation & Reviews"
+      blurb: "Re-engage dormant CRM leads with automated multi-channel outreach and collect Google reviews on autopilot. Performance-based — you only pay per result."
     - name: "Custom AI Development"
-      blurb: "When off-the-shelf AI tools don't fit, we build something that does — custom chatbots, document processors, and AI-powered tools designed around your actual workflow, not a generic use case."
-    - name: "AI Strategy & Consulting"
-      blurb: "Before you invest in AI, know exactly where it will pay off. We audit your processes, identify the highest-leverage automation opportunities, and hand you a clear implementation roadmap."
+      blurb: "When off-the-shelf AI tools don't fit, we build something that does — document processors, workflow automation, and AI decision engines tailored to your business."
 portfolio_teaser:
   heading: "From the Field"
   project_name: "Tourism Quotation Engine"
