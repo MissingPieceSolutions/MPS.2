@@ -1,14 +1,17 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getResource, getResources } from '@/lib/content';
+import { getResource } from '@/lib/content';
+import { createBuildSupabase } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/Badge';
 
 export const revalidate = 60;
 
 export async function generateStaticParams() {
-  const resources = await getResources();
-  return resources.map((r) => ({ slug: r.slug }));
+  const supabase = createBuildSupabase();
+  if (!supabase) return [];
+  const { data } = await supabase.from('resources').select('slug').eq('status', 'published');
+  return (data ?? []).map((r) => ({ slug: r.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

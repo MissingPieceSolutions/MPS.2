@@ -1,14 +1,17 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getBlogPost, getBlogPosts } from '@/lib/content';
+import { getBlogPost } from '@/lib/content';
+import { createBuildSupabase } from '@/lib/supabase/server';
 import { Badge } from '@/components/ui/Badge';
 
 export const revalidate = 60;
 
 export async function generateStaticParams() {
-  const posts = await getBlogPosts();
-  return posts.map((p) => ({ slug: p.slug }));
+  const supabase = createBuildSupabase();
+  if (!supabase) return [];
+  const { data } = await supabase.from('blog_posts').select('slug').eq('status', 'published');
+  return (data ?? []).map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {

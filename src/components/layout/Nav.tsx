@@ -66,7 +66,7 @@ export function Nav() {
                 key={link.href}
                 href={link.href}
                 className={`text-sm font-medium transition-colors ${
-                  pathname.startsWith(link.href)
+                  pathname?.startsWith(link.href)
                     ? 'text-accent'
                     : 'text-text-muted hover:text-text-primary'
                 }`}
