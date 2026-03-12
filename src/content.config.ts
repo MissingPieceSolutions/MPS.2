@@ -19,4 +19,24 @@ const caseStudies = defineCollection({
   }).passthrough(),
 });
 
-export const collections = { pages, caseStudies };
+const blog = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/blog' }),
+  schema: z.object({
+    title: z.string(),
+    excerpt: z.string().optional(),
+    date: z.coerce.string().optional(),
+    tags: z.array(z.string()).optional(),
+  }).passthrough(),
+});
+
+const resources = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/resources' }),
+  schema: z.object({
+    title: z.string(),
+    excerpt: z.string().optional(),
+    date: z.coerce.string().optional(),
+    tags: z.array(z.string()).optional(),
+  }).passthrough(),
+});
+
+export const collections = { pages, caseStudies, blog, resources };
