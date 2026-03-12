@@ -1,24 +1,33 @@
 {
-  "name": "mps-website-temp",
+  "name": "mps-website",
+  "version": "2.0.0",
+  "private": true,
   "type": "module",
-  "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "seed": "npx tsx scripts/seed.ts"
   },
   "dependencies": {
-    "@astrojs/sitemap": "^3.7.0",
-    "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "next": "^15.3.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "@supabase/supabase-js": "^2.49.8",
+    "@supabase/ssr": "^0.7.0",
     "@fontsource-variable/space-grotesk": "^5.2.10",
-    "@tailwindcss/vite": "^4.2.1",
-    "astro": "^5.17.1",
-    "gsap": "^3.14.2",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "tailwindcss": "^4.2.1",
-    "three": "^0.183.2"
+    "@tailwindcss/postcss": "^4.2.1"
   },
   "devDependencies": {
-    "canvas": "^3.2.1"
+    "typescript": "^5.8.3",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "tsx": "^4.19.4",
+    "gray-matter": "^4.0.3",
+    "dotenv": "^16.5.0"
   }
 }
