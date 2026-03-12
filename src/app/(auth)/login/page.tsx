@@ -12,8 +12,8 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/admin';
-  const justRegistered = searchParams.get('registered') === 'true';
+  const redirect = searchParams?.get('redirect') || '/admin';
+  const justRegistered = searchParams?.get('registered') === 'true';
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
