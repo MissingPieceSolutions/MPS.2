@@ -48,15 +48,17 @@ src/
 
 - Homepage `page.tsx` stays a server component
 - `ParticleGate` imported via `dynamic(() => import(...), { ssr: false })`
-- Renders as `position: absolute; inset: 0; z-index: 0` behind the hero
-- `HeroSection` gets `position: relative; z-index: 1`
-- Rest of the page scrolls naturally over the particle logo
+- The homepage root `<div>` wrapping the hero gets `className="relative"` to become the positioning context
+- ParticleGate canvas renders as `position: absolute; inset: 0; z-index: 0` inside that wrapper
+- `HeroSection` gets `position: relative; z-index: 1` to sit above the canvas
+- Rest of the page (TrustBar, services, etc.) is outside the wrapper and scrolls naturally over the particle logo
 
 ### Script Modifications (`particle-gate.ts`)
 
 - Remove scatter/exit animation — logo is the permanent resting state
+- Remove gate portals (amber/fuchsia arches) and starfield background — only the logo particles remain. This simplifies the visual to a clean logo convergence.
 - Add ambient drift (sine-based oscillation around logo positions)
-- Accept `particleCount` parameter for tier-based scaling
+- Accept `particleCount` parameter for tier-based scaling (Tier 1: 7000 logo particles only)
 - Simplified export: `initParticleGate(container, options?) → { destroy }`
 - Keep mouse parallax (existing behavior)
 - Image sampling from `/logo/mps-icon-512.png` (existing behavior)
@@ -71,9 +73,9 @@ src/
 
 | Scroll Position | Morph Stage | Label | Sublabel |
 |---|---|---|---|
-| 0–33% | Particle cloud | **"Raw Data"** | scattered, unstructured, potential |
-| 33–66% | Neural network grid | **"Connected"** | patterns emerge, systems form |
-| 66–100% | Coherent sphere | **"Intelligent"** | deployed, autonomous, evolving |
+| 0–33% | Scattered particle cloud (replaces existing sine wave stream — free-floating, no wave pattern) | **"Raw Data"** | scattered, unstructured, potential |
+| 33–66% | 3D network grid (existing shape, keep as-is) | **"Connected"** | patterns emerge, systems form |
+| 66–100% | Globe with orbital ring (existing shape, keep ring — it reinforces "system in motion") | **"Intelligent"** | deployed, autonomous, evolving |
 
 ### Behavior
 
@@ -83,11 +85,18 @@ src/
 - Labels use `font-mono text-accent/50` (eyebrow style), sublabel in `text-text-muted`
 - Labels fade in/out using existing `data-reveal="fade"` system from ScrollRevealInit
 - Scroll position drives morph stages via exponential smoothing (lerp factor 0.04, existing)
-- Color palette: `#8b5cf6` → `#7c3aed` → `#f8f8fc` (matches design tokens)
+- Color palette per stage:
+  - Stage 1 (Raw Data): cool blue-teal (`#3b82f6` → `#06b6d4`) — raw, unprocessed feel
+  - Stage 2 (Connected): purple (`#8b5cf6` → `#7c3aed`) — MPS brand accent, transformation
+  - Stage 3 (Intelligent): near-white (`#c4b5fd` → `#f8f8fc`) — clarity, refined output
 
 ### Footer Section
 
 After the three morph stages, a final section with the MPS brand name and CTA linking to `/contact`.
+
+### Scroll Normalization
+
+Scroll-driven morph progress (`uScroll`) is mapped only to the three morph sections, not the full page height. The footer section is excluded from the scroll range — once the user scrolls past the third section, `uScroll` stays clamped at 1.0 (globe holds its shape). This prevents the footer from affecting morph timing. Implementation: calculate the bottom of the third section element and use that as the scroll range denominator instead of `document.documentElement.scrollHeight`.
 
 ### Page Architecture
 
@@ -99,10 +108,11 @@ After the three morph stages, a final section with the MPS brand name and CTA li
 
 ### Script Modifications (`particle-experience.ts`)
 
-- Rename morph stages to match narrative: particle cloud → neural network → coherent sphere
+- Reshape stage 1: replace sine wave stream with free-floating scattered particle cloud
+- Keep stage 2 (3D network grid) and stage 3 (globe with orbital ring) as-is
 - Accept `particleCount` parameter for tier-based scaling
 - Keep scroll normalization and exponential smoothing (existing)
-- Keep color transition logic (existing, update palette to design tokens)
+- Update color transition logic to use the three-stage palette defined in Behavior section
 
 ---
 
@@ -124,7 +134,8 @@ After the three morph stages, a final section with the MPS brand name and CTA li
 
 **`useGpuTier.ts`** (React hook):
 - Calls `gpu-detect.ts`, combines with `useReducedMotion`
-- Returns `{ tier: 1 | 2 | 3, particleCount: number }`
+- Returns `{ tier: 1 | 2 | 3 | null, loading: boolean, particleCount: number }`
+- While `loading` is true (`tier` is null), components render the Tier 3 static fallback. This ensures no flash of wrong tier and provides immediate visual content while detection runs.
 
 ### Tier Definitions
 
