@@ -1,33 +1,63 @@
-import type { Metadata } from 'next';
-import { getPage } from '@/lib/content';
-import type { ExperiencePageContent } from '@/types/content';
+'use client';
+
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
-export const revalidate = 60; // Phase 3: remove revalidate when page becomes fully client-rendered with Three.js
-export const metadata: Metadata = { title: 'Experience', description: 'Interactive scroll-driven experience.' };
+const ParticleExperience = dynamic(() => import('@/components/three/ParticleExperience'), { ssr: false });
 
-export default async function ExperiencePage() {
-  const page = await getPage('experience');
-  const content = page?.content as unknown as ExperiencePageContent | undefined;
-  const sections = content?.sections || [];
-  const footerNav = content?.footerNav || [];
+const STAGES = [
+  {
+    number: '001',
+    eyebrow: 'Raw Data',
+    heading: 'WE FIND\nTHE PIECES',
+    body: 'Every business has gaps between what they want to achieve and what their systems can do. We find them.',
+    align: 'left' as const,
+  },
+  {
+    number: '002',
+    eyebrow: 'Connected',
+    heading: 'WE\nCONNECT THEM',
+    body: 'AI agents, automation workflows, and intelligent systems — custom-built to bridge the gap.',
+    align: 'right' as const,
+  },
+  {
+    number: '003',
+    eyebrow: 'Intelligent',
+    heading: 'ORBIT\nACHIEVED',
+    body: 'Your operations run smoother, your team focuses on what matters, and your business scales.',
+    align: 'left' as const,
+  },
+];
 
+const FOOTER_NAV = [
+  { label: 'Services', href: '/services' },
+  { label: 'Pricing', href: '/pricing' },
+  { label: 'Portfolio', href: '/portfolio' },
+  { label: 'About', href: '/about' },
+  { label: 'Contact', href: '/contact' },
+];
+
+export default function ExperiencePage() {
   return (
     <div className="min-h-screen">
-      {/* Phase 3 will add particle canvas background */}
+      <ParticleExperience />
+
       <div className="relative z-10">
-        {sections.map((section, i) => (
+        {STAGES.map((stage, i) => (
           <section
-            key={section.label || i}
+            key={stage.number}
             className="min-h-screen flex items-center px-6"
-            data-reveal="fade-up"
+            data-reveal="fade"
+            {...(i === STAGES.length - 1 ? { 'data-morph-end': '' } : {})}
           >
-            <div className={`mx-auto max-w-4xl w-full ${i % 2 === 1 ? 'text-right' : ''}`}>
-              <span className="text-xs font-mono text-accent/50">{section.label}</span>
-              <h2 className="text-4xl sm:text-5xl font-bold text-text-primary mt-2">
-                {section.content.heading}
+            <div className={`mx-auto max-w-4xl w-full ${stage.align === 'right' ? 'text-right' : ''}`}>
+              <span className="text-xs font-mono text-accent/50">{stage.eyebrow}</span>
+              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-text-primary mt-2 whitespace-pre-line">
+                {stage.heading}
               </h2>
-              <p className="text-text-muted mt-4 max-w-lg">{section.content.body}</p>
+              <p className={`text-text-muted mt-4 max-w-lg ${stage.align === 'right' ? 'ml-auto' : ''}`}>
+                {stage.body}
+              </p>
             </div>
           </section>
         ))}
@@ -47,7 +77,7 @@ export default async function ExperiencePage() {
         <footer className="py-12 px-6 text-center space-y-6">
           <p className="text-sm text-text-muted">AI systems that close the gap between ambition and outcome.</p>
           <div className="flex justify-center gap-6">
-            {footerNav.map((link) => (
+            {FOOTER_NAV.map((link) => (
               <Link key={link.href} href={link.href} className="text-sm text-text-muted hover:text-accent transition-colors">
                 {link.label}
               </Link>

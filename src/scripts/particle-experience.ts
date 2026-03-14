@@ -1,15 +1,14 @@
 /**
  * Particle Experience — Scroll-Driven Three.js Particle Morphing
  *
- * A full-screen particle system that transitions between three shapes
- * as the user scrolls through the experience page:
- *   Phase 1 (0–0.5): Flowing wave/stream → Network/grid transition
- *   Phase 2 (0.5–1.0): Network/grid → Globe with orbital ring transition
+ * Three stages driven by scroll:
+ *   Stage 1 (0–33%): Scattered particle cloud — "Raw Data"
+ *   Stage 2 (33–66%): 3D network grid — "Connected"
+ *   Stage 3 (66–100%): Globe with orbital ring — "Intelligent"
  *
- * Scroll position is normalised to 0–1 and lerped smoothly (factor 0.04)
- * to drive a uScroll uniform in the vertex shader.
+ * Scroll is clamped to morph sections only (footer excluded).
  *
- * Exports `initParticleExperience(container)` returning `{ destroy }`.
+ * Exports `initParticleExperience(container, options?)` returning `{ destroy }`.
  */
 
 import * as THREE from 'three';
@@ -18,67 +17,60 @@ import * as THREE from 'three';
 // Constants
 // ---------------------------------------------------------------------------
 
-const PARTICLE_COUNT = 5000;
+const DEFAULT_PARTICLE_COUNT = 5000;
 const BASE_POINT_SIZE = 3.5;
 
 // ---------------------------------------------------------------------------
 // GLSL Shaders
 // ---------------------------------------------------------------------------
 
-const vertexShader = /* glsl */ `
-  attribute float aIndex;    // normalised 0–1 index per particle
-  attribute float aRandom;   // random seed per particle
+function buildVertexShader(particleCount: number): string {
+  return /* glsl */ `
+  attribute float aIndex;
+  attribute float aRandom;
 
   uniform float uTime;
-  uniform float uScroll;     // smoothed scroll 0–1
+  uniform float uScroll;
   uniform float uPixelRatio;
 
   varying vec3  vColor;
   varying float vAlpha;
 
-  // -----------------------------------------------------------------------
-  // Shape functions — each returns a vec3 position for a particle
-  // -----------------------------------------------------------------------
-
-  // Phase 1: flowing sine wave stream
-  vec3 waveShape(float idx, float rnd, float time) {
-    float x = (idx - 0.5) * 14.0;
-    float y = sin(x * 0.8 + time * 0.6 + rnd * 6.28) * 2.0 + (rnd - 0.5) * 1.5;
-    float z = cos(x * 0.5 + time * 0.4 + rnd * 3.14) * 1.5 + (rnd - 0.5) * 1.0;
+  // Stage 1: Scattered particle cloud
+  vec3 cloudShape(float idx, float rnd, float time) {
+    float angle = idx * 6.28318 * 13.0 + rnd * 6.28;
+    float radius = 2.0 + rnd * 4.0;
+    float x = cos(angle + time * 0.1 * (rnd - 0.5)) * radius;
+    float y = sin(angle * 0.7 + time * 0.15 * rnd) * radius * 0.6 + (rnd - 0.5) * 3.0;
+    float z = sin(angle * 1.3 + time * 0.08) * radius * 0.4 + (rnd - 0.5) * 2.0;
     return vec3(x, y, z);
   }
 
-  // Phase 2: 3D network grid
+  // Stage 2: 3D network grid
   vec3 networkShape(float idx, float rnd) {
     float gridSize = 6.0;
-    float spacing = 3.0;
     float total = gridSize * gridSize * gridSize;
-    float i = mod(floor(idx * ${PARTICLE_COUNT}.0), total);
+    float i = mod(floor(idx * ${particleCount}.0), total);
     float z = floor(i / (gridSize * gridSize));
     float rem = i - z * gridSize * gridSize;
     float y = floor(rem / gridSize);
     float x = rem - y * gridSize;
-    vec3 pos = (vec3(x, y, z) - vec3(gridSize * 0.5 - 0.5)) * (spacing / gridSize) * 3.0;
-    // Add slight jitter
+    vec3 pos = (vec3(x, y, z) - vec3(gridSize * 0.5 - 0.5)) * (3.0 / gridSize) * 3.0;
     pos += (rnd - 0.5) * 0.3;
     return pos;
   }
 
-  // Phase 3: globe with orbital ring
+  // Stage 3: Globe with orbital ring
   vec3 globeShape(float idx, float rnd) {
     float radius = 3.0;
-    // 80% sphere, 20% ring
     if (rnd > 0.8) {
-      // Orbital ring
       float angle = idx * 6.28318 * 5.0 + rnd * 6.28;
       float ringR = radius * 1.3;
-      // Tilted orbital ring (~30 degrees) in Y-up scene
-      float tilt = 0.5236; // ~30 degrees
+      float tilt = 0.5236;
       float cx = cos(angle) * ringR;
       float cz = sin(angle) * ringR;
       return vec3(cx, cz * sin(tilt), cz * cos(tilt));
     }
-    // Sphere via fibonacci distribution
     float phi = acos(1.0 - 2.0 * idx);
     float theta = acos(-1.0) * (1.0 + sqrt(5.0)) * idx * 100.0;
     return vec3(
@@ -88,45 +80,36 @@ const vertexShader = /* glsl */ `
     );
   }
 
-  // -----------------------------------------------------------------------
-  // Colour functions per phase
-  // -----------------------------------------------------------------------
-
-  // Phase 1: blues and teals
-  vec3 colorPhase1(float rnd) {
-    vec3 blue = vec3(0.3, 0.6, 1.0);
-    vec3 teal = vec3(0.1, 0.85, 0.8);
+  // Colors per stage
+  vec3 colorStage1(float rnd) {
+    vec3 blue = vec3(0.231, 0.510, 0.965);
+    vec3 teal = vec3(0.024, 0.714, 0.831);
     return mix(blue, teal, rnd);
   }
 
-  // Phase 2: shifting to purple
-  vec3 colorPhase2(float rnd) {
+  vec3 colorStage2(float rnd) {
     vec3 purple = vec3(0.545, 0.361, 0.965);
-    vec3 violet = vec3(0.6, 0.3, 0.9);
+    vec3 violet = vec3(0.486, 0.228, 0.929);
     return mix(purple, violet, rnd);
   }
 
-  // Phase 3: purple with white highlights
-  vec3 colorPhase3(float rnd) {
-    vec3 purple = vec3(0.545, 0.361, 0.965);
-    vec3 white = vec3(0.95, 0.95, 1.0);
-    return mix(purple, white, smoothstep(0.7, 1.0, rnd));
+  vec3 colorStage3(float rnd) {
+    vec3 lavender = vec3(0.769, 0.710, 0.992);
+    vec3 white = vec3(0.973, 0.973, 0.988);
+    return mix(lavender, white, smoothstep(0.6, 1.0, rnd));
   }
 
   void main() {
-    float phase = uScroll * 2.0; // 0–2 (two transitions across full scroll)
+    float phase = uScroll * 2.0;
 
-    // Compute positions for all three shapes
-    vec3 p1 = waveShape(aIndex, aRandom, uTime);
+    vec3 p1 = cloudShape(aIndex, aRandom, uTime);
     vec3 p2 = networkShape(aIndex, aRandom);
     vec3 p3 = globeShape(aIndex, aRandom);
 
-    // Compute colours for all three phases
-    vec3 c1 = colorPhase1(aRandom);
-    vec3 c2 = colorPhase2(aRandom);
-    vec3 c3 = colorPhase3(aRandom);
+    vec3 c1 = colorStage1(aRandom);
+    vec3 c2 = colorStage2(aRandom);
+    vec3 c3 = colorStage3(aRandom);
 
-    // Interpolate based on phase
     vec3 pos;
     vec3 col;
 
@@ -142,7 +125,7 @@ const vertexShader = /* glsl */ `
       col = c3;
     }
 
-    // Add gentle ambient drift
+    // Ambient drift
     float drift = sin(uTime * 0.8 + aIndex * 6.28) * 0.05;
     pos += vec3(drift, drift * 0.7, drift * 0.5);
 
@@ -150,44 +133,58 @@ const vertexShader = /* glsl */ `
     vAlpha = mix(0.6, 0.9, aRandom);
 
     vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-    gl_Position  = projectionMatrix * mvPosition;
+    gl_Position = projectionMatrix * mvPosition;
 
     float size = ${BASE_POINT_SIZE.toFixed(1)} * uPixelRatio;
     gl_PointSize = size * (300.0 / -mvPosition.z);
   }
 `;
+}
 
 const fragmentShader = /* glsl */ `
   varying vec3  vColor;
   varying float vAlpha;
 
   void main() {
-    // Soft glowing disc — same as particle-gate.ts
     float d = length(gl_PointCoord - 0.5);
     if (d > 0.5) discard;
     float alpha = 1.0 - smoothstep(0.0, 0.5, d);
-
     gl_FragColor = vec4(vColor, alpha * vAlpha);
   }
 `;
 
 // ---------------------------------------------------------------------------
-// Main initialiser
+// Public interface
 // ---------------------------------------------------------------------------
 
 export interface ParticleExperienceControls {
-  /** Full cleanup — remove canvas, dispose GPU resources, unbind listeners */
   destroy: () => void;
 }
 
-export function initParticleExperience(container: HTMLElement): ParticleExperienceControls {
-  // --- Renderer -----------------------------------------------------------
+export interface ParticleExperienceOptions {
+  particleCount?: number;
+  /** CSS selector for the last morph section (scroll clamped to its bottom) */
+  scrollEndSelector?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Main initialiser
+// ---------------------------------------------------------------------------
+
+export function initParticleExperience(
+  container: HTMLElement,
+  options?: ParticleExperienceOptions,
+): ParticleExperienceControls {
+  const count = options?.particleCount ?? DEFAULT_PARTICLE_COUNT;
+  const scrollEndSelector = options?.scrollEndSelector ?? '[data-morph-end]';
+
+  // --- Renderer ---
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
   container.appendChild(renderer.domElement);
 
-  // --- Scene & Camera -----------------------------------------------------
+  // --- Scene & Camera ---
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(
     50,
@@ -197,23 +194,22 @@ export function initParticleExperience(container: HTMLElement): ParticleExperien
   );
   camera.position.z = 10;
 
-  // --- Build particle geometry --------------------------------------------
-  const indices = new Float32Array(PARTICLE_COUNT);
-  const randoms = new Float32Array(PARTICLE_COUNT);
+  // --- Geometry ---
+  const indices = new Float32Array(count);
+  const randoms = new Float32Array(count);
 
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
-    indices[i] = i / PARTICLE_COUNT;
+  for (let i = 0; i < count; i++) {
+    indices[i] = i / count;
     randoms[i] = Math.random();
   }
 
   const geometry = new THREE.BufferGeometry();
-  // Position attribute is required but we compute positions in the shader
-  const dummyPositions = new Float32Array(PARTICLE_COUNT * 3);
+  const dummyPositions = new Float32Array(count * 3);
   geometry.setAttribute('position', new THREE.BufferAttribute(dummyPositions, 3));
   geometry.setAttribute('aIndex', new THREE.BufferAttribute(indices, 1));
   geometry.setAttribute('aRandom', new THREE.BufferAttribute(randoms, 1));
 
-  // --- Shader material ----------------------------------------------------
+  // --- Shader material ---
   const uniforms = {
     uTime: { value: 0 },
     uScroll: { value: 0 },
@@ -221,7 +217,7 @@ export function initParticleExperience(container: HTMLElement): ParticleExperien
   };
 
   const material = new THREE.ShaderMaterial({
-    vertexShader,
+    vertexShader: buildVertexShader(count),
     fragmentShader,
     uniforms,
     transparent: true,
@@ -232,20 +228,22 @@ export function initParticleExperience(container: HTMLElement): ParticleExperien
   const points = new THREE.Points(geometry, material);
   scene.add(points);
 
-  // --- Scroll handling (slap-apps pattern) --------------------------------
+  // --- Scroll handling (clamped to morph sections) ---
   let scrollTarget = 0;
   let smoothScroll = 0;
 
   function onScroll(): void {
-    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-    scrollTarget = maxScroll > 0 ? window.scrollY / maxScroll : 0;
+    const endEl = document.querySelector(scrollEndSelector);
+    const scrollEnd = endEl
+      ? endEl.getBoundingClientRect().bottom + window.scrollY - window.innerHeight
+      : document.documentElement.scrollHeight - window.innerHeight;
+    scrollTarget = scrollEnd > 0 ? Math.min(window.scrollY / scrollEnd, 1.0) : 0;
   }
 
   window.addEventListener('scroll', onScroll, { passive: true });
-  // Initialise in case page is already scrolled
   onScroll();
 
-  // --- Resize handling ----------------------------------------------------
+  // --- Resize ---
   function onResize(): void {
     const w = container.clientWidth;
     const h = container.clientHeight;
@@ -257,7 +255,7 @@ export function initParticleExperience(container: HTMLElement): ParticleExperien
 
   window.addEventListener('resize', onResize, { passive: true });
 
-  // --- Animation loop -----------------------------------------------------
+  // --- Animation loop ---
   let destroyed = false;
   let animationFrameId = 0;
   const clock = new THREE.Clock();
@@ -267,8 +265,6 @@ export function initParticleExperience(container: HTMLElement): ParticleExperien
     animationFrameId = requestAnimationFrame(animate);
 
     uniforms.uTime.value = clock.getElapsedTime();
-
-    // Smooth lerp scroll — same factor as slap-apps (0.04)
     smoothScroll += (scrollTarget - smoothScroll) * 0.04;
     uniforms.uScroll.value = smoothScroll;
 
@@ -277,7 +273,7 @@ export function initParticleExperience(container: HTMLElement): ParticleExperien
 
   animate();
 
-  // --- Cleanup ------------------------------------------------------------
+  // --- Cleanup ---
   function destroy(): void {
     if (destroyed) return;
     destroyed = true;

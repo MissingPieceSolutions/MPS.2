@@ -6,6 +6,7 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { CtaBanner } from '@/components/sections/CtaBanner';
 import { TrustBar } from '@/components/sections/TrustBar';
 import { Button } from '@/components/ui/Button';
+import { ParticleGateLoader } from '@/components/three/ParticleGateLoader';
 import type { HomePageContent } from '@/types/content';
 
 export const revalidate = 60;
@@ -21,14 +22,17 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-24 pb-12">
-      {/* Hero — Phase 3 will add particle gate behind this */}
+      {/* Hero with particle gate behind it */}
       {content?.hero && (
-        <HeroSection
-          headline={content.hero.headline}
-          subheadline={content.hero.subheadline}
-          ctaPrimary={{ label: content.hero.cta_primary?.label || 'See Our Work', href: content.hero.cta_primary?.href || '/portfolio' }}
-          ctaSecondary={{ label: content.hero.cta_secondary?.label || 'Talk to Us', href: content.hero.cta_secondary?.href || '/contact' }}
-        />
+        <div className="relative">
+          <ParticleGateLoader />
+          <HeroSection
+            headline={content.hero.headline}
+            subheadline={content.hero.subheadline}
+            ctaPrimary={{ label: content.hero.cta_primary?.label || 'See Our Work', href: content.hero.cta_primary?.href || '/portfolio' }}
+            ctaSecondary={{ label: content.hero.cta_secondary?.label || 'Talk to Us', href: content.hero.cta_secondary?.href || '/contact' }}
+          />
+        </div>
       )}
 
       <TrustBar />

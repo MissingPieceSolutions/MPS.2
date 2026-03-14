@@ -9,7 +9,7 @@ interface HeroSectionProps {
 
 export function HeroSection({ headline, subheadline, ctaPrimary, ctaSecondary }: HeroSectionProps) {
   return (
-    <section id="hero" className="relative py-24 sm:py-32 px-6">
+    <section id="hero" className="relative z-10 py-24 sm:py-32 px-6">
       <div className="mx-auto max-w-4xl text-center space-y-8" data-reveal="fade-up">
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-text-primary leading-tight">
           {headline}
